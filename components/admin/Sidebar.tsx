@@ -1,3 +1,5 @@
+// components/admin/Sidebar.tsx
+
 "use client";
 
 import { useState } from "react";
@@ -11,23 +13,21 @@ import {
   ChevronRight,
   UserCog,
   ShoppingCart,
-  ClipboardList,
-  Layers,
-  DollarSign,
-  FileText,
-  Warehouse,
-  Scissors,
-  Home,
   Package,
   Eye,
   BarChart3,
   Shield,
-  CreditCard,
-  LogOut,
+  DollarSign,
+  FileText,
+  Warehouse,
+  Scissors,
   Calendar,
   TrendingUp,
-  Bell,
+  CreditCard,
+  Home,
+  LogOut,
   HelpCircle,
+  Pill,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -60,8 +60,9 @@ export function AdminSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     glass: false,
-    ophthalmologist: false,
+    ophthalmology: false,
     finance: false,
+    medicine: false,
   });
 
   const pathname = usePathname();
@@ -102,6 +103,12 @@ export function AdminSidebar() {
           badge: "12",
         },
         {
+          title: "Glass Issues",
+          href: "/glass/issues",
+          icon: <Scissors className="h-4 w-4" />,
+          roles: ["admin", "staff"],
+        },
+        {
           title: "Customers",
           href: "/glass/customers",
           icon: <Users className="h-4 w-4" />,
@@ -113,56 +120,44 @@ export function AdminSidebar() {
           icon: <Home className="h-4 w-4" />,
           roles: ["admin", "staff"],
         },
-        {
-          title: "Glass Issues",
-          href: "/glass/issues",
-          icon: <Scissors className="h-4 w-4" />,
-          roles: ["admin", "staff"],
-        },
-        {
-          title: "Cut-to-Size",
-          href: "/glass/cut-to-size",
-          icon: <Scissors className="h-4 w-4" />,
-          roles: ["admin", "staff"],
-        },
       ],
     },
     {
-      title: "Ophthalmologist",
+      title: "Ophthalmology",
       icon: <Eye className="h-5 w-5" />,
       roles: ["admin", "staff"],
       children: [
         {
           title: "Daily Records",
-          href: "/ophthalmologist/records",
+          href: "/ophthalmology/records",
           icon: <FileText className="h-4 w-4" />,
           roles: ["admin", "staff"],
         },
         {
-          title: "Consultations",
-          href: "/ophthalmologist/consultations",
-          icon: <Eye className="h-4 w-4" />,
-          roles: ["admin", "staff"],
-          badge: "24",
-        },
-        {
-          title: "Operations",
-          href: "/ophthalmologist/operations",
-          icon: <Scissors className="h-4 w-4" />,
-          roles: ["admin", "staff"],
-        },
-        {
           title: "Patients",
-          href: "/ophthalmologist/patients",
+          href: "/ophthalmology/patients",
           icon: <Users className="h-4 w-4" />,
           roles: ["admin", "staff"],
         },
         {
           title: "Appointments",
-          href: "/ophthalmologist/appointments",
+          href: "/ophthalmology/appointments",
           icon: <Calendar className="h-4 w-4" />,
           roles: ["admin", "staff"],
           badge: "8",
+        },
+      ],
+    },
+    {
+      title: "Medicine",
+      icon: <Pill className="h-5 w-5" />,
+      roles: ["admin", "staff"],
+      children: [
+        {
+          title: "Medicine Stock",
+          href: "/medicine/stock",
+          icon: <Package className="h-4 w-4" />,
+          roles: ["admin", "staff"],
         },
       ],
     },
@@ -172,33 +167,27 @@ export function AdminSidebar() {
       roles: ["admin", "staff"],
       children: [
         {
-          title: "Daily Expenses",
-          href: "/finance/expenses",
-          icon: <CreditCard className="h-4 w-4" />,
-          roles: ["admin", "staff"],
-        },
-        {
-          title: "Cash at Hand",
-          href: "/finance/cash",
-          icon: <DollarSign className="h-4 w-4" />,
-          roles: ["admin", "staff"],
-        },
-        {
           title: "Daily Cash",
           href: "/finance/daily-cash",
           icon: <BarChart3 className="h-4 w-4" />,
           roles: ["admin", "staff"],
         },
         {
-          title: "Reports",
-          href: "/finance/reports",
-          icon: <TrendingUp className="h-4 w-4" />,
+          title: "Cash at Hand",
+          href: "/finance/cash-hand",
+          icon: <DollarSign className="h-4 w-4" />,
           roles: ["admin", "staff"],
         },
         {
-          title: "Invoices",
-          href: "/finance/invoices",
-          icon: <FileText className="h-4 w-4" />,
+          title: "Daily Expenses",
+          href: "/finance/expenses",
+          icon: <CreditCard className="h-4 w-4" />,
+          roles: ["admin", "staff"],
+        },
+        {
+          title: "Reports",
+          href: "/finance/reports",
+          icon: <TrendingUp className="h-4 w-4" />,
           roles: ["admin", "staff"],
         },
       ],
@@ -224,13 +213,6 @@ export function AdminSidebar() {
     },
   ];
 
-  // Admin-only quick stats (only show for admin)
-  const adminStats = [
-    { label: "Revenue", value: "$58,420", change: "+15.2%" },
-    { label: "Orders", value: "248", change: "+8.5%" },
-    { label: "Stock Value", value: "$124,850", change: "+3.2%" },
-  ];
-
   // Filter items based on user role
   const filteredItems = navItems.filter(
     (item) => user?.role && item.roles.includes(user.role)
@@ -249,7 +231,7 @@ export function AdminSidebar() {
   return (
     <aside
       className={cn(
-        "relative h-screen border-r bg-gradient-to-b from-slate-50 to-white dark:from-gray-900 dark:to-gray-800 transition-all duration-300 overflow-hidden",
+        "relative h-screen border-r bg-linear-to-b from-slate-50 to-white dark:from-gray-900 dark:to-gray-800 transition-all duration-300 overflow-hidden",
         collapsed ? "w-16" : "w-64"
       )}
     >
@@ -263,7 +245,7 @@ export function AdminSidebar() {
         >
           {!collapsed && (
             <div className="flex items-center gap-2">
-              <div className="p-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg">
+              <div className="p-2 bg-linear-to-r from-blue-500 to-cyan-500 rounded-lg">
                 <Warehouse className="h-6 w-6 text-white" />
               </div>
               <div>
@@ -293,31 +275,7 @@ export function AdminSidebar() {
 
         {/* Admin Stats (only for admin, not collapsed) */}
         {user.role === "admin" && !collapsed && (
-          <div className="p-4 border-b">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                  Quick Stats
-                </span>
-                <Bell className="h-4 w-4 text-gray-400" />
-              </div>
-              {adminStats.map((stat, index) => (
-                <div key={index} className="space-y-1">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {stat.label}
-                    </span>
-                    <span className="text-xs text-green-600 dark:text-green-400">
-                      {stat.change}
-                    </span>
-                  </div>
-                  <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                    {stat.value}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <div className="p-4 border-b"> </div>
         )}
 
         {/* Navigation */}
@@ -508,7 +466,7 @@ export function AdminSidebar() {
                 <DropdownMenuTrigger asChild>
                   <Avatar className="h-8 w-8 cursor-pointer">
                     <AvatarImage src={user?.avatar} alt={user?.name} />
-                    <AvatarFallback className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white">
+                    <AvatarFallback className="bg-linear-to-r from-blue-500 to-cyan-500 text-white">
                       {user?.name
                         ?.split(" ")
                         .map((n) => n[0])
