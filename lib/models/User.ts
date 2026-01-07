@@ -7,25 +7,89 @@ export interface IUser {
   email: string;
   password: string;
   phone: string;
-  role: "admin" | "ceo" | "laboratory" | "pharmacy";
+  role: "admin" | "staff";
   approved: boolean;
   avatar?: string;
   refreshTokens?: string[];
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-const userSchema = new Schema<IUser>({
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  phone: { type: String, required: true },
-  role: {
-    type: String,
-    enum: ["admin", "ceo", "laboratory", "pharmacy"],
-    default: "laboratory",
+const userSchema = new Schema<IUser>(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
+    password: {
+      type: String,
+      required: true,
+    },
+    phone: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    role: {
+      type: String,
+      enum: ["admin", "staff"],
+      default: "staff",
+      required: true,
+    },
+    approved: {
+      type: Boolean,
+      default: false,
+    },
+    avatar: {
+      type: String,
+    },
+    refreshTokens: {
+      type: [String],
+      default: [],
+    },
+    active: {
+      type: Boolean,
+      default: true,
+    },
   },
-  approved: { type: Boolean, default: false },
-  avatar: { type: String },
-  refreshTokens: { type: [String], default: [] },
+  {
+    timestamps: true,
+  }
+);
+
+// Indexes for efficient querying
+userSchema.index({ email: 1 });
+userSchema.index({ role: 1 });
+userSchema.index({ approved: 1 });
+userSchema.index({ active: 1 });
+
+// Virtual for full role description
+userSchema.virtual("roleDescription").get(function () {
+  const roleDescriptions = {
+    admin: "Administrator (Full Access)",
+    staff: "Staff (Glass Management)",
+  };
+  return roleDescriptions[this.role] || this.role;
+});
+
+// Pre-save hook to capitalize name
+userSchema.pre("save", function (next) {
+  if (this.name) {
+    this.name = this.name
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+  }
+  next();
 });
 
 // Use named export

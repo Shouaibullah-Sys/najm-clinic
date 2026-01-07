@@ -1,3 +1,4 @@
+// lib/models/CashAtHand.ts
 import mongoose, { Schema, Document } from "mongoose";
 import { IUser } from "./User";
 
@@ -45,5 +46,7 @@ const CashAtHandSchema: Schema = new Schema(
 CashAtHandSchema.index({ staffId: 1, date: -1 });
 CashAtHandSchema.index({ date: -1 });
 
-export default mongoose.models.CashAtHand ||
+// Change from export default to named export
+export const CashAtHand =
+  mongoose.models.CashAtHand ||
   mongoose.model<ICashAtHand>("CashAtHand", CashAtHandSchema);

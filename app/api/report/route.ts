@@ -1,6 +1,6 @@
 // app/api/pharmacy/stock/reports/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { MedicineStock } from "@/lib/models/MedicineStock";
+import { MedicineStock } from "@/lib/models/GlassStock";
 import dbConnect from "@/lib/dbConnect";
 import { getTokenPayload } from "@/lib/auth/jwt";
 

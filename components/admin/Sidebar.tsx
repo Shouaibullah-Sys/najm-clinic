@@ -1,23 +1,33 @@
+"use client";
+
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
-  FlaskConical,
-  Pill,
   Settings,
   ChevronLeft,
   ChevronRight,
-  BarChart4,
   UserCog,
   ShoppingCart,
   ClipboardList,
   Layers,
-  LayoutDashboardIcon,
   DollarSign,
-  ScrollText,
-  Pickaxe,
+  FileText,
+  Warehouse,
+  Scissors,
+  Home,
+  Package,
+  Eye,
+  BarChart3,
+  Shield,
+  CreditCard,
+  LogOut,
+  Calendar,
+  TrendingUp,
+  Bell,
+  HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -28,27 +38,35 @@ import {
 } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuthStore } from "@/store/useAuthStore";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface NavItem {
   title: string;
   href?: string;
   icon: React.ReactNode;
-  roles: ("admin" | "ceo" | "laboratory" | "pharmacy")[];
+  roles: ("admin" | "staff")[];
+  badge?: string | number;
   children?: NavItem[];
 }
 
 export function AdminSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
-    laboratory: false,
-    pharmacy: false,
+    glass: false,
+    ophthalmologist: false,
+    finance: false,
   });
 
   const pathname = usePathname();
-
-  // Use the auth store
-  const user = useAuthStore((state) => state.user);
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const router = useRouter();
+  const { user, isAuthenticated, logout } = useAuthStore();
 
   const toggleGroup = (groupName: string) => {
     setOpenGroups((prev) => ({
@@ -62,81 +80,141 @@ export function AdminSidebar() {
       title: "Dashboard",
       href: "/dashboard",
       icon: <LayoutDashboard className="h-5 w-5" />,
-      roles: ["admin", "ceo"],
+      roles: ["admin", "staff"],
+    },
+    {
+      title: "Glass Business",
+      icon: <Warehouse className="h-5 w-5" />,
+      roles: ["admin", "staff"],
+      children: [
+        {
+          title: "Glass Stock",
+          href: "/glass/stock",
+          icon: <Package className="h-4 w-4" />,
+          roles: ["admin", "staff"],
+          badge: user?.role === "staff" ? "3" : undefined,
+        },
+        {
+          title: "Orders",
+          href: "/glass/orders",
+          icon: <ShoppingCart className="h-4 w-4" />,
+          roles: ["admin", "staff"],
+          badge: "12",
+        },
+        {
+          title: "Customers",
+          href: "/glass/customers",
+          icon: <Users className="h-4 w-4" />,
+          roles: ["admin", "staff"],
+        },
+        {
+          title: "Suppliers",
+          href: "/glass/suppliers",
+          icon: <Home className="h-4 w-4" />,
+          roles: ["admin", "staff"],
+        },
+        {
+          title: "Glass Issues",
+          href: "/glass/issues",
+          icon: <Scissors className="h-4 w-4" />,
+          roles: ["admin", "staff"],
+        },
+        {
+          title: "Cut-to-Size",
+          href: "/glass/cut-to-size",
+          icon: <Scissors className="h-4 w-4" />,
+          roles: ["admin", "staff"],
+        },
+      ],
+    },
+    {
+      title: "Ophthalmologist",
+      icon: <Eye className="h-5 w-5" />,
+      roles: ["admin", "staff"],
+      children: [
+        {
+          title: "Daily Records",
+          href: "/ophthalmologist/records",
+          icon: <FileText className="h-4 w-4" />,
+          roles: ["admin", "staff"],
+        },
+        {
+          title: "Consultations",
+          href: "/ophthalmologist/consultations",
+          icon: <Eye className="h-4 w-4" />,
+          roles: ["admin", "staff"],
+          badge: "24",
+        },
+        {
+          title: "Operations",
+          href: "/ophthalmologist/operations",
+          icon: <Scissors className="h-4 w-4" />,
+          roles: ["admin", "staff"],
+        },
+        {
+          title: "Patients",
+          href: "/ophthalmologist/patients",
+          icon: <Users className="h-4 w-4" />,
+          roles: ["admin", "staff"],
+        },
+        {
+          title: "Appointments",
+          href: "/ophthalmologist/appointments",
+          icon: <Calendar className="h-4 w-4" />,
+          roles: ["admin", "staff"],
+          badge: "8",
+        },
+      ],
+    },
+    {
+      title: "Finance",
+      icon: <DollarSign className="h-5 w-5" />,
+      roles: ["admin", "staff"],
+      children: [
+        {
+          title: "Daily Expenses",
+          href: "/finance/expenses",
+          icon: <CreditCard className="h-4 w-4" />,
+          roles: ["admin", "staff"],
+        },
+        {
+          title: "Cash at Hand",
+          href: "/finance/cash",
+          icon: <DollarSign className="h-4 w-4" />,
+          roles: ["admin", "staff"],
+        },
+        {
+          title: "Daily Cash",
+          href: "/finance/daily-cash",
+          icon: <BarChart3 className="h-4 w-4" />,
+          roles: ["admin", "staff"],
+        },
+        {
+          title: "Reports",
+          href: "/finance/reports",
+          icon: <TrendingUp className="h-4 w-4" />,
+          roles: ["admin", "staff"],
+        },
+        {
+          title: "Invoices",
+          href: "/finance/invoices",
+          icon: <FileText className="h-4 w-4" />,
+          roles: ["admin", "staff"],
+        },
+      ],
+    },
+    {
+      title: "Analytics",
+      href: "/analytics",
+      icon: <BarChart3 className="h-5 w-5" />,
+      roles: ["admin"],
     },
     {
       title: "Users",
       href: "/admin/users",
       icon: <Users className="h-5 w-5" />,
       roles: ["admin"],
-    },
-    {
-      title: "Laboratory",
-      icon: <FlaskConical className="h-5 w-5" />,
-      roles: ["admin", "ceo", "laboratory"],
-      children: [
-        {
-          title: "Dashboard",
-          href: "/laboratory/dashboard", // Fixed typo: labratory -> laboratory
-          icon: <LayoutDashboardIcon className="h-4 w-4" />,
-          roles: ["admin", "ceo", "laboratory"],
-        },
-        {
-          title: "Daily Records",
-          href: "/laboratory/records",
-          icon: <ClipboardList className="h-4 w-4" />,
-          roles: ["admin", "ceo", "laboratory"],
-        },
-        {
-          title: "Daily Expenses",
-          href: "/laboratory/expenses", // Fixed typo: labratory -> laboratory
-          icon: <ShoppingCart className="h-4 w-4" />,
-          roles: ["admin", "ceo", "laboratory"],
-        },
-      ],
-    },
-    {
-      title: "Pharmacy",
-      icon: <Pill className="h-5 w-5" />,
-      roles: ["admin", "ceo", "pharmacy"],
-      children: [
-        {
-          title: "Dashboard",
-          href: "/pharmacy",
-          icon: <LayoutDashboardIcon className="h-4 w-4" />,
-          roles: ["admin", "ceo", "pharmacy"],
-        },
-        {
-          title: "Daily Expenses",
-          href: "/pharmacy/expenses",
-          icon: <ShoppingCart className="h-4 w-4" />,
-          roles: ["admin", "ceo", "pharmacy"],
-        },
-        {
-          title: "Stock Management",
-          href: "/pharmacy/stock",
-          icon: <Layers className="h-4 w-4" />,
-          roles: ["admin", "ceo", "pharmacy"],
-        },
-        {
-          title: "Medicine Issue",
-          href: "/pharmacy/issue",
-          icon: <Pill className="h-4 w-4" />,
-          roles: ["admin", "ceo", "pharmacy"],
-        },
-        {
-          title: "Inventory",
-          href: "/pharmacy/inventory",
-          icon: <ScrollText className="h-4 w-4" />,
-          roles: ["admin", "ceo", "pharmacy"],
-        },
-        {
-          title: "Cash at Hand",
-          href: "/pharmacy/cash",
-          icon: <DollarSign className="h-4 w-4" />,
-          roles: ["admin", "ceo", "pharmacy"],
-        },
-      ],
+      badge: user?.role === "admin" ? "2" : undefined,
     },
     {
       title: "Settings",
@@ -144,6 +222,13 @@ export function AdminSidebar() {
       icon: <Settings className="h-5 w-5" />,
       roles: ["admin"],
     },
+  ];
+
+  // Admin-only quick stats (only show for admin)
+  const adminStats = [
+    { label: "Revenue", value: "$58,420", change: "+15.2%" },
+    { label: "Orders", value: "248", change: "+8.5%" },
+    { label: "Stock Value", value: "$124,850", change: "+3.2%" },
   ];
 
   // Filter items based on user role
@@ -156,10 +241,15 @@ export function AdminSidebar() {
     return null;
   }
 
+  const handleLogout = async () => {
+    await logout();
+    router.push("/login");
+  };
+
   return (
     <aside
       className={cn(
-        "relative h-screen border-r bg-muted/40 transition-all duration-300",
+        "relative h-screen border-r bg-gradient-to-b from-slate-50 to-white dark:from-gray-900 dark:to-gray-800 transition-all duration-300 overflow-hidden",
         collapsed ? "w-16" : "w-64"
       )}
     >
@@ -173,20 +263,62 @@ export function AdminSidebar() {
         >
           {!collapsed && (
             <div className="flex items-center gap-2">
-              <FlaskConical className="h-8 w-8 text-primary" />
-              <span className="text-xl font-semibold">LabManager</span>
+              <div className="p-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg">
+                <Warehouse className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <span className="text-lg font-bold text-gray-900 dark:text-white">
+                  GlassPro
+                </span>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Management System
+                </p>
+              </div>
             </div>
           )}
 
           <Button
             variant="ghost"
             size="icon"
-            className="ml-auto"
+            className={cn("h-8 w-8", collapsed ? "ml-0" : "ml-auto")}
             onClick={() => setCollapsed(!collapsed)}
           >
-            {collapsed ? <ChevronRight /> : <ChevronLeft />}
+            {collapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
           </Button>
         </div>
+
+        {/* Admin Stats (only for admin, not collapsed) */}
+        {user.role === "admin" && !collapsed && (
+          <div className="p-4 border-b">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                  Quick Stats
+                </span>
+                <Bell className="h-4 w-4 text-gray-400" />
+              </div>
+              {adminStats.map((stat, index) => (
+                <div key={index} className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {stat.label}
+                    </span>
+                    <span className="text-xs text-green-600 dark:text-green-400">
+                      {stat.change}
+                    </span>
+                  </div>
+                  <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {stat.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-4">
@@ -208,22 +340,36 @@ export function AdminSidebar() {
                         <TooltipTrigger asChild>
                           <div
                             className={cn(
-                              "flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors cursor-pointer",
+                              "flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 group",
                               isGroupActive
-                                ? "bg-primary text-primary-foreground"
-                                : "text-muted-foreground hover:bg-accent"
+                                ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300"
+                                : "text-gray-700 dark:text-gray-300"
                             )}
                             onClick={() =>
                               toggleGroup(item.title.toLowerCase())
                             }
                           >
                             <span className="flex items-center w-full">
-                              {item.icon}
+                              <div
+                                className={cn(
+                                  "p-1.5 rounded-md",
+                                  isGroupActive
+                                    ? "bg-blue-100 dark:bg-blue-800"
+                                    : "bg-gray-100 dark:bg-gray-700 group-hover:bg-blue-100 dark:group-hover:bg-blue-800"
+                                )}
+                              >
+                                {item.icon}
+                              </div>
                               {!collapsed && (
                                 <>
                                   <span className="ml-3 flex-1">
                                     {item.title}
                                   </span>
+                                  {item.badge && (
+                                    <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200 rounded-full">
+                                      {item.badge}
+                                    </span>
+                                  )}
                                   <ChevronRight
                                     className={cn(
                                       "h-4 w-4 transition-transform",
@@ -245,7 +391,7 @@ export function AdminSidebar() {
                       </Tooltip>
 
                       {!collapsed && openGroups[item.title.toLowerCase()] && (
-                        <ul className="mt-1 ml-6 pl-2 space-y-1 border-l border-muted">
+                        <ul className="mt-1 ml-8 pl-3 space-y-1 border-l border-gray-200 dark:border-gray-700">
                           {item.children
                             .filter(
                               (child) =>
@@ -265,17 +411,22 @@ export function AdminSidebar() {
                                       <Link
                                         href={child.href || "#"}
                                         className={cn(
-                                          "flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                                          "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 group",
                                           isChildActive
-                                            ? "text-primary font-semibold"
-                                            : "text-muted-foreground hover:bg-accent"
+                                            ? "text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 font-semibold"
+                                            : "text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-300 hover:bg-gray-50 dark:hover:bg-gray-800"
                                         )}
                                       >
-                                        <span className="flex items-center">
+                                        <span className="flex items-center w-full">
                                           {child.icon}
-                                          <span className="ml-3">
+                                          <span className="ml-3 flex-1">
                                             {child.title}
                                           </span>
+                                          {child.badge && (
+                                            <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200 rounded-full">
+                                              {child.badge}
+                                            </span>
+                                          )}
                                         </span>
                                       </Link>
                                     </TooltipTrigger>
@@ -295,16 +446,34 @@ export function AdminSidebar() {
                         <Link
                           href={item.href || "#"}
                           className={cn(
-                            "flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                            "flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-800 group",
                             isActive
-                              ? "bg-primary text-primary-foreground"
-                              : "text-muted-foreground hover:bg-accent"
+                              ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300"
+                              : "text-gray-700 dark:text-gray-300"
                           )}
                         >
-                          <span className="flex items-center">
-                            {item.icon}
+                          <span className="flex items-center w-full">
+                            <div
+                              className={cn(
+                                "p-1.5 rounded-md",
+                                isActive
+                                  ? "bg-blue-100 dark:bg-blue-800"
+                                  : "bg-gray-100 dark:bg-gray-700 group-hover:bg-blue-100 dark:group-hover:bg-blue-800"
+                              )}
+                            >
+                              {item.icon}
+                            </div>
                             {!collapsed && (
-                              <span className="ml-3">{item.title}</span>
+                              <>
+                                <span className="ml-3 flex-1">
+                                  {item.title}
+                                </span>
+                                {item.badge && (
+                                  <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200 rounded-full">
+                                    {item.badge}
+                                  </span>
+                                )}
+                              </>
                             )}
                           </span>
                         </Link>
@@ -312,6 +481,9 @@ export function AdminSidebar() {
                       {collapsed && (
                         <TooltipContent side="right">
                           <p>{item.title}</p>
+                          {item.badge && (
+                            <span className="ml-2 text-xs">{item.badge}</span>
+                          )}
                         </TooltipContent>
                       )}
                     </Tooltip>
@@ -322,43 +494,120 @@ export function AdminSidebar() {
           </ul>
         </nav>
 
-        {/* User profile */}
-        <div
-          className={cn("border-t p-4", collapsed ? "flex justify-center" : "")}
-        >
-          <div className="flex items-center gap-3">
-            <Avatar>
-              <AvatarImage src={user?.avatar} alt={user?.name} />
-              <AvatarFallback>
-                {user?.name
-                  ?.split(" ")
-                  .map((n) => n[0])
-                  .join("")}
-              </AvatarFallback>
-            </Avatar>
+        {/* User profile & Help */}
+        <div className="border-t p-4 space-y-3">
+          {/* User profile */}
+          <div
+            className={cn(
+              "flex items-center",
+              collapsed ? "justify-center" : "justify-between"
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Avatar className="h-8 w-8 cursor-pointer">
+                    <AvatarImage src={user?.avatar} alt={user?.name} />
+                    <AvatarFallback className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white">
+                      {user?.name
+                        ?.split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align={collapsed ? "center" : "end"}
+                  side="right"
+                >
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        {user?.name}
+                      </p>
+                      <p className="text-xs leading-none text-gray-500 dark:text-gray-400 capitalize">
+                        {user?.role === "admin" ? "Administrator" : "Staff"}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => router.push("/profile")}>
+                    <UserCog className="mr-2 h-4 w-4" />
+                    Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.push("/settings")}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleLogout}
+                    className="text-red-600 dark:text-red-400"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {!collapsed && (
+                <div className="flex-1 truncate">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    {user?.name}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                    {user?.role === "admin" ? "Administrator" : "Staff"}
+                  </p>
+                </div>
+              )}
+            </div>
 
             {!collapsed && (
-              <div className="flex-1 truncate">
-                <p className="font-medium">{user?.name}</p>
-                <p className="text-xs text-muted-foreground capitalize">
-                  {user?.role}
-                </p>
+              <div className="flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => router.push("/help")}
+                    >
+                      <HelpCircle className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Help & Support</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Logout</TooltipContent>
+                </Tooltip>
               </div>
             )}
-
-            {!collapsed && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link href="/admin/profile">
-                    <Button variant="ghost" size="icon">
-                      <UserCog className="h-5 w-5" />
-                    </Button>
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent>Profile Settings</TooltipContent>
-              </Tooltip>
-            )}
           </div>
+
+          {/* System Status (only visible when not collapsed) */}
+          {!collapsed && (
+            <div className="pt-3 border-t">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    System Online
+                  </span>
+                </div>
+                <Shield className="h-3 w-3 text-green-500" />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </aside>

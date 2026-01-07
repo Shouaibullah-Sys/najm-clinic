@@ -4,15 +4,19 @@ import { persist } from "zustand/middleware";
 import Cookies from "universal-cookie";
 import { jwtDecode } from "jwt-decode";
 
-export type UserRole = "admin" | "ceo" | "laboratory" | "pharmacy";
+export type UserRole = "admin" | "staff";
 
 export interface User {
-  id: string;
+  _id: string;
   name: string;
   email: string;
   role: UserRole;
-  phone?: string;
+  phone: string;
   avatar?: string;
+  approved: boolean;
+  active: boolean;
+  department?: string;
+  joiningDate?: string;
 }
 
 interface AuthState {
@@ -27,10 +31,13 @@ interface AuthState {
   initialize: () => Promise<void>;
   refreshAccessToken: () => Promise<void>;
   clearError: () => void;
+  updateUser: (userData: Partial<User>) => void;
 }
 
 interface TokenPayload {
   exp: number;
+  userId: string;
+  role: UserRole;
   [key: string]: unknown;
 }
 
@@ -47,16 +54,19 @@ export const useAuthStore = create<AuthState>()(
       error: null,
 
       login: (user, accessToken, refreshToken) => {
+        const accessTokenExpiry = 15 * 60; // 15 minutes
+        const refreshTokenExpiry = 7 * 24 * 60 * 60; // 7 days
+
         cookies.set("accessToken", accessToken, {
           path: "/",
-          maxAge: 15 * 60,
+          maxAge: accessTokenExpiry,
           sameSite: "lax",
           secure: process.env.NODE_ENV === "production",
         });
 
         cookies.set("refreshToken", refreshToken, {
           path: "/",
-          maxAge: 7 * 24 * 60 * 60,
+          maxAge: refreshTokenExpiry,
           sameSite: "lax",
           secure: process.env.NODE_ENV === "production",
         });
@@ -94,7 +104,10 @@ export const useAuthStore = create<AuthState>()(
             const decoded = jwtDecode<TokenPayload>(accessToken);
             if (decoded.exp * 1000 > Date.now()) {
               const response = await fetch("/api/auth/me", {
-                headers: { Authorization: `Bearer ${accessToken}` },
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                  "Content-Type": "application/json",
+                },
               });
 
               if (response.ok) {
@@ -172,6 +185,11 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+      updateUser: (userData) =>
+        set((state) => ({
+          user: state.user ? { ...state.user, ...userData } : null,
+        })),
+
       clearError: () => set({ error: null }),
     }),
     {
@@ -179,3 +197,20 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 );
+
+// Utility functions for auth
+export const isAdmin = (user: User | null): boolean => {
+  return user?.role === "admin";
+};
+
+export const isStaff = (user: User | null): boolean => {
+  return user?.role === "staff";
+};
+
+export const isApproved = (user: User | null): boolean => {
+  return user?.approved === true;
+};
+
+export const isActive = (user: User | null): boolean => {
+  return user?.active === true;
+};

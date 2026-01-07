@@ -19,9 +19,10 @@ import {
 import { useAuthStore } from "@/store/useAuthStore";
 import Cookies from "universal-cookie";
 import { jwtDecode } from "jwt-decode";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 
 const formSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  email: z.string().email("Please enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
@@ -32,6 +33,7 @@ interface LoginFormProps {
 export default function LoginForm({ redirect = "/dashboard" }: LoginFormProps) {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
+  const [success, setSuccess] = useState<string>("");
   const router = useRouter();
   const login = useAuthStore((state) => state.login);
 
@@ -43,6 +45,7 @@ export default function LoginForm({ redirect = "/dashboard" }: LoginFormProps) {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setLoading(true);
     setError("");
+    setSuccess("");
 
     try {
       const response = await fetch("/api/auth/login", {
@@ -55,52 +58,91 @@ export default function LoginForm({ redirect = "/dashboard" }: LoginFormProps) {
       const contentType = response.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
         const text = await response.text();
-        throw new Error(`Unexpected response: ${text}`);
+        throw new Error(`Server error: ${text}`);
       }
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Login failed");
+        throw new Error(
+          data.error || "Login failed. Please check your credentials."
+        );
       }
 
-      // Extract role from token payload
-      const tokenPayload = jwtDecode<{ role: string }>(data.accessToken);
+      // Extract user info from token
+      const tokenPayload = jwtDecode<{
+        role: string;
+        id: string;
+        email: string;
+      }>(data.accessToken);
 
       // Set role in cookie for middleware
       const cookies = new Cookies();
-      cookies.set("role", tokenPayload.role, {
+      cookies.set("userRole", tokenPayload.role, {
         path: "/",
         maxAge: 7 * 24 * 60 * 60, // 7 days
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
       });
 
-      // Call Zustand login function with both tokens
+      // Call Zustand login function
       login(data.user, data.accessToken, data.refreshToken);
 
-      // Redirect after successful login
-      router.push(redirect);
+      setSuccess("Login successful! Redirecting...");
+
+      // Show success message before redirect
+      setTimeout(() => {
+        router.push(redirect);
+      }, 1500);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      const errorMessage =
+        err instanceof Error ? err.message : "An unexpected error occurred";
+      setError(errorMessage);
+
+      // Auto-clear error after 5 seconds
+      setTimeout(() => {
+        setError("");
+      }, 5000);
     } finally {
       setLoading(false);
     }
   };
 
-  return (
+
+ return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {error && <div className="text-red-500 text-sm">{error}</div>}
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {/* Error Message */}
+        {error && (
+          <div className="flex items-center gap-2 p-3 text-sm text-red-700 bg-red-50 dark:bg-red-900/20 dark:text-red-300 rounded-lg">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* Success Message */}
+        {success && (
+          <div className="flex items-center gap-2 p-3 text-sm text-green-700 bg-green-50 dark:bg-green-900/20 dark:text-green-300 rounded-lg">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>{success}</span>
+          </div>
+        )}
 
         <FormField
           control={form.control}
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel className="text-gray-700 dark:text-gray-300">
+                Email
+              </FormLabel>
               <FormControl>
-                <Input placeholder="user@example.com" {...field} />
+                <Input
+                  type="email"
+                  placeholder="Enter your email"
+                  {...field}
+                  className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -112,17 +154,72 @@ export default function LoginForm({ redirect = "/dashboard" }: LoginFormProps) {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <FormLabel className="text-gray-700 dark:text-gray-300">
+                Password
+              </FormLabel>
               <FormControl>
-                <Input type="password" placeholder="Password" {...field} />
+                <Input
+                  type="password"
+                  placeholder="Enter your password"
+                  {...field}
+                  className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Logging in..." : "Login"}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="remember"
+              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+            />
+            <label
+              htmlFor="remember"
+              className="ml-2 text-sm text-gray-600 dark:text-gray-300"
+            >
+              Remember me
+            </label>
+          </div>
+          <a
+            href="#"
+            className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+          >
+            Forgot password?
+          </a>
+        </div>
+
+        <Button type="submit" className="w-full" disabled={loading} size="lg">
+          {loading ? (
+            <>
+              <svg
+                className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              Signing in...
+            </>
+          ) : (
+            "Sign In"
+          )}
         </Button>
       </form>
     </Form>

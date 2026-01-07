@@ -1,5 +1,4 @@
-//components/auth/RegisterForm.tsx
-
+// components/auth/RegisterForm.tsx
 "use client";
 
 import { useState } from "react";
@@ -17,15 +16,21 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { AlertCircle, CheckCircle2, Eye, EyeOff } from "lucide-react";
 
+// Role enum tuple for zod - use tuple literal directly
 const formSchema = z
   .object({
-    name: z.string().min(2, "Name must be at least 2 characters"),
-    email: z.string().email("Invalid email address"),
+    name: z
+      .string()
+      .min(2, "Name must be at least 2 characters")
+      .max(100, "Name is too long"),
+    email: z.string().email("Please enter a valid email address").toLowerCase(),
     phone: z
       .string()
       .min(10, "Phone number must be at least 10 digits")
-      .regex(/^[0-9+]+$/, "Invalid phone number format"),
+      .max(15, "Phone number is too long")
+      .regex(/^[0-9+()\- ]+$/, "Invalid phone number format"),
     password: z
       .string()
       .min(8, "Password must be at least 8 characters")
@@ -33,6 +38,7 @@ const formSchema = z
       .regex(/[0-9]/, "Must contain at least one number")
       .regex(/[!@#$%^&*]/, "Must contain at least one special character"),
     confirmPassword: z.string(),
+    role: z.enum(["admin", "staff"]),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
@@ -40,22 +46,13 @@ const formSchema = z
   });
 
 type FormValues = z.infer<typeof formSchema>;
-type ApiResponse = {
-  error?: string;
-  message?: string;
-  [key: string]: unknown;
-};
 
-interface RegisterFormProps {
-  redirect?: string;
-}
-
-export default function RegisterForm({
-  redirect = "/dashboard",
-}: RegisterFormProps) {
+export default function RegisterForm() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [apiError, setApiError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const router = useRouter();
 
   const form = useForm<FormValues>({
@@ -66,6 +63,7 @@ export default function RegisterForm({
       phone: "",
       password: "",
       confirmPassword: "",
+      role: "staff",
     },
   });
 
@@ -82,24 +80,32 @@ export default function RegisterForm({
           email: values.email,
           password: values.password,
           phone: values.phone,
+          role: values.role,
         }),
       });
 
-      const data: ApiResponse = await response.json();
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Registration failed");
+        throw new Error(data.error || "Registration failed. Please try again.");
       }
 
       setSuccess(true);
       form.reset();
 
-      // Optional: Redirect to login after a delay
+      // Redirect to login after 3 seconds
       setTimeout(() => {
-        router.push("/login");
+        router.push("/login?message=registered");
       }, 3000);
     } catch (err: unknown) {
-      setApiError(err instanceof Error ? err.message : "Registration failed");
+      const errorMessage =
+        err instanceof Error ? err.message : "Registration failed";
+      setApiError(errorMessage);
+
+      // Auto-clear error after 5 seconds
+      setTimeout(() => {
+        setApiError("");
+      }, 5000);
     } finally {
       setLoading(false);
     }
@@ -107,20 +113,26 @@ export default function RegisterForm({
 
   if (success) {
     return (
-      <div className="text-center space-y-4">
-        <div className="text-green-600 font-medium">
-          Registration successful!
+      <div className="text-center space-y-4 p-4">
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full mb-4">
+          <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-300" />
         </div>
-        <p className="text-gray-600">
-          Your account is pending admin approval. You'll receive an email when
-          your account is activated.
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
+          Registration Successful!
+        </h3>
+        <p className="text-gray-600 dark:text-gray-300">
+          Your account has been created and is pending admin approval. You will
+          receive an email notification once your account is activated.
+        </p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Redirecting to login page...
         </p>
         <Button
           variant="outline"
-          onClick={() => setSuccess(false)}
+          onClick={() => router.push("/login")}
           className="mt-4"
         >
-          Register Another Account
+          Go to Login
         </Button>
       </div>
     );
@@ -130,92 +142,240 @@ export default function RegisterForm({
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         {apiError && (
-          <div className="text-red-500 text-sm font-medium">{apiError}</div>
+          <div className="flex items-center gap-2 p-3 text-sm text-red-700 bg-red-50 dark:bg-red-900/20 dark:text-red-300 rounded-lg">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span>{apiError}</span>
+          </div>
         )}
 
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Full Name</FormLabel>
-              <FormControl>
-                <Input placeholder="John Doe" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-gray-700 dark:text-gray-300">
+                  Full Name
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="John Doe"
+                    {...field}
+                    className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-gray-700 dark:text-gray-300">
+                  Phone Number
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="+1 (555) 123-4567"
+                    {...field}
+                    className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <FormField
           control={form.control}
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel className="text-gray-700 dark:text-gray-300">
+                Email Address
+              </FormLabel>
               <FormControl>
-                <Input type="email" placeholder="user@example.com" {...field} />
+                <Input
+                  type="email"
+                  placeholder="user@example.com"
+                  {...field}
+                  className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="phone"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Phone Number</FormLabel>
-              <FormControl>
-                <Input placeholder="+1234567890" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-gray-700 dark:text-gray-300">
+                  Password
+                </FormLabel>
+                <div className="relative">
+                  <FormControl>
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      {...field}
+                      className="dark:bg-gray-700 dark:border-gray-600 dark:text-white pr-10"
+                    />
+                  </FormControl>
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4 text-gray-400" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Password</FormLabel>
-              <FormControl>
-                <Input type="password" placeholder="••••••••" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          <FormField
+            control={form.control}
+            name="confirmPassword"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-gray-700 dark:text-gray-300">
+                  Confirm Password
+                </FormLabel>
+                <div className="relative">
+                  <FormControl>
+                    <Input
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      {...field}
+                      className="dark:bg-gray-700 dark:border-gray-600 dark:text-white pr-10"
+                    />
+                  </FormControl>
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4 text-gray-400" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
-        <FormField
-          control={form.control}
-          name="confirmPassword"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Confirm Password</FormLabel>
-              <FormControl>
-                <Input type="password" placeholder="••••••••" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="text-xs text-gray-600 space-y-2">
-          <p>Password must contain:</p>
-          <ul className="list-disc pl-5">
-            <li>At least 8 characters</li>
-            <li>One uppercase letter</li>
-            <li>One number</li>
-            <li>One special character</li>
+        {/* Password Requirements */}
+        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 space-y-2">
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Password Requirements:
+          </p>
+          <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+            <li className="flex items-center">
+              <div
+                className={`w-2 h-2 rounded-full mr-2 ${
+                  form.watch("password")?.length >= 8
+                    ? "bg-green-500"
+                    : "bg-gray-300"
+                }`}
+              />
+              At least 8 characters
+            </li>
+            <li className="flex items-center">
+              <div
+                className={`w-2 h-2 rounded-full mr-2 ${
+                  /[A-Z]/.test(form.watch("password") || "")
+                    ? "bg-green-500"
+                    : "bg-gray-300"
+                }`}
+              />
+              One uppercase letter
+            </li>
+            <li className="flex items-center">
+              <div
+                className={`w-2 h-2 rounded-full mr-2 ${
+                  /[0-9]/.test(form.watch("password") || "")
+                    ? "bg-green-500"
+                    : "bg-gray-300"
+                }`}
+              />
+              One number
+            </li>
+            <li className="flex items-center">
+              <div
+                className={`w-2 h-2 rounded-full mr-2 ${
+                  /[!@#$%^&*]/.test(form.watch("password") || "")
+                    ? "bg-green-500"
+                    : "bg-gray-300"
+                }`}
+              />
+              One special character
+            </li>
           </ul>
         </div>
 
-        <Button type="submit" className="w-full mt-2" disabled={loading}>
-          {loading ? "Registering..." : "Create Account"}
+        <Button type="submit" className="w-full" disabled={loading} size="lg">
+          {loading ? (
+            <>
+              <svg
+                className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              Creating Account...
+            </>
+          ) : (
+            "Create Account"
+          )}
         </Button>
+
+        <p className="text-center text-sm text-gray-600 dark:text-gray-400">
+          By creating an account, you agree to our{" "}
+          <a
+            href="#"
+            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+          >
+            Terms of Service
+          </a>{" "}
+          and{" "}
+          <a
+            href="#"
+            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+          >
+            Privacy Policy
+          </a>
+        </p>
       </form>
     </Form>
   );

@@ -1,6 +1,6 @@
 // lib/utils/pharmacyUtils.ts
-import {MedicineStock} from '@/lib/models/MedicineStock';
-import { IMedicineStock } from '@/lib/models/MedicineStock';
+import { MedicineStock } from "@/lib/models/GlassStock";
+import { IMedicineStock } from "@/lib/models/GlassStock";
 
 export async function issueMedicine(
   medicineId: string,
@@ -10,22 +10,24 @@ export async function issueMedicine(
 ): Promise<IMedicineStock> {
   const medicine = await MedicineStock.findById(medicineId);
   if (!medicine) {
-    throw new Error('Medicine not found');
+    throw new Error("Medicine not found");
   }
 
   if (medicine.currentQuantity < quantity) {
-    throw new Error('Insufficient stock');
+    throw new Error("Insufficient stock");
   }
 
   medicine.currentQuantity -= quantity;
   medicine.history.push({
     date: new Date(),
-    type: 'issued',
+    type: "issued",
     quantity,
     changedBy: userId,
     previousQuantity: medicine.currentQuantity + quantity,
     prescriptionId,
-    reason: `Issued ${quantity} units for prescription ${prescriptionId || 'N/A'}`
+    reason: `Issued ${quantity} units for prescription ${
+      prescriptionId || "N/A"
+    }`,
   });
 
   return medicine.save();
@@ -39,17 +41,17 @@ export async function restockMedicine(
 ): Promise<IMedicineStock> {
   const medicine = await MedicineStock.findById(medicineId);
   if (!medicine) {
-    throw new Error('Medicine not found');
+    throw new Error("Medicine not found");
   }
 
   medicine.currentQuantity += quantity;
   medicine.history.push({
     date: new Date(),
-    type: 'restocked',
+    type: "restocked",
     quantity,
     changedBy: userId,
     previousQuantity: medicine.currentQuantity - quantity,
-    reason: reason || `Restocked ${quantity} units`
+    reason: reason || `Restocked ${quantity} units`,
   });
 
   return medicine.save();
@@ -63,11 +65,11 @@ export async function adjustMedicine(
 ): Promise<IMedicineStock> {
   const medicine = await MedicineStock.findById(medicineId);
   if (!medicine) {
-    throw new Error('Medicine not found');
+    throw new Error("Medicine not found");
   }
 
   const quantityDifference = newQuantity - medicine.currentQuantity;
-  const changeType = quantityDifference < 0 ? 'issued' : 'restocked';
+  const changeType = quantityDifference < 0 ? "issued" : "restocked";
 
   medicine.currentQuantity = newQuantity;
   medicine.history.push({
@@ -76,7 +78,7 @@ export async function adjustMedicine(
     quantity: Math.abs(quantityDifference),
     changedBy: userId,
     previousQuantity: medicine.currentQuantity,
-    reason: reason || `Manual adjustment to ${newQuantity} units`
+    reason: reason || `Manual adjustment to ${newQuantity} units`,
   });
 
   return medicine.save();

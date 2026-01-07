@@ -1,13 +1,13 @@
-// Import from auth-server (server-side only)
+// app/api/auth/[...all]/route.ts
 import { handler } from "@/lib/auth-server";
 
 // Better-auth catch-all route handler
-export const GET = handler;
-export const POST = handler;
-
-// Also handle other HTTP methods that better-auth might need
-export const PUT = handler;
-export const DELETE = handler;
-export const PATCH = handler;
-export const HEAD = handler;
-export const OPTIONS = handler;
+export {
+  handler as GET,
+  handler as POST,
+  handler as PUT,
+  handler as DELETE,
+  handler as PATCH,
+  handler as HEAD,
+  handler as OPTIONS,
+};

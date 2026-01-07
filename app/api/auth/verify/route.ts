@@ -1,9 +1,16 @@
 // app/api/auth/verify/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { jwtDecode } from "jwt-decode";
+import jwt, { type JwtPayload } from "jsonwebtoken";
 import { cookies } from "next/headers";
 
 export async function GET(req: NextRequest) {
+  if (!process.env.JWT_SECRET) {
+    return NextResponse.json(
+      { authenticated: false, error: "Server configuration error" },
+      { status: 500 }
+    );
+  }
+
   try {
     const cookieStore = await cookies();
     const accessToken = cookieStore.get("accessToken")?.value;
@@ -12,13 +19,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ authenticated: false }, { status: 200 });
     }
 
-    // Verify the token
     try {
-      const decoded: any = jwtDecode(accessToken);
-      const currentTime = Date.now() / 1000;
+      const decoded = jwt.verify(
+        accessToken,
+        process.env.JWT_SECRET
+      ) as JwtPayload;
+      const currentTime = Math.floor(Date.now() / 1000);
 
-      // Check if token is expired
-      if (decoded.exp < currentTime) {
+      if (decoded.exp && decoded.exp < currentTime) {
         return NextResponse.json({ authenticated: false }, { status: 200 });
       }
 
@@ -27,6 +35,7 @@ export async function GET(req: NextRequest) {
         user: {
           id: decoded.id,
           role: decoded.role,
+          email: decoded.email,
         },
       });
     } catch (error) {

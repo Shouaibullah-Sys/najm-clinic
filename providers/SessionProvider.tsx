@@ -1,13 +1,45 @@
-//provider/SessionProvider.tsx
+// provider/SessionProvider.tsx
+"use client";
 
-'use client';
+import { createContext, useContext, ReactNode } from "react";
+import { useAuthStore, User } from "@/store/useAuthStore";
 
-import { SessionProvider } from 'next-auth/react';
+interface SessionContextType {
+  user: User | null;
+  status: "authenticated" | "unauthenticated" | "loading";
+  isLoading: boolean;
+}
 
-export default function AuthProvider({
+const SessionContext = createContext<SessionContextType>({
+  user: null,
+  status: "unauthenticated",
+  isLoading: true,
+});
+
+export const useSession = () => useContext(SessionContext);
+
+export default function CustomSessionProvider({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
-  return <SessionProvider>{children}</SessionProvider>;
+  const user = useAuthStore((state) => state.user);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isLoading = useAuthStore((state) => state.isLoading);
+
+  const status = isLoading
+    ? "loading"
+    : isAuthenticated
+    ? "authenticated"
+    : "unauthenticated";
+
+  const value = {
+    user,
+    status,
+    isLoading,
+  };
+
+  return (
+    <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
+  );
 }

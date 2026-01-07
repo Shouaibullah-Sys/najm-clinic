@@ -1,21 +1,33 @@
 // app/api/auth/refresh/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { jwtDecode } from "jwt-decode";
+import jwt, { JwtPayload } from "jsonwebtoken";
 import { cookies } from "next/headers";
+import dbConnect from "@/lib/dbConnect";
+import { User } from "@/lib/models/User";
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
+  if (!process.env.JWT_SECRET) {
+    return NextResponse.json(
+      { error: "Server configuration error" },
+      { status: 500 }
+    );
+  }
+
   try {
     const cookieStore = await cookies();
     const refreshToken = cookieStore.get("refreshToken")?.value;
-    const accessToken = cookieStore.get("accessToken")?.value;
 
     if (!refreshToken) {
-      return NextResponse.json({ error: "No refresh token" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Refresh token required" },
+        { status: 401 }
+      );
     }
 
-    // Verify the refresh token (you might want to add more validation)
+    // Verify refresh token
+    let decoded: JwtPayload;
     try {
-      jwtDecode(refreshToken);
+      decoded = jwt.verify(refreshToken, process.env.JWT_SECRET) as JwtPayload;
     } catch (error) {
       return NextResponse.json(
         { error: "Invalid refresh token" },
@@ -23,51 +35,110 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if access token is still valid
-    if (accessToken) {
-      try {
-        const decoded: any = jwtDecode(accessToken);
-        const currentTime = Date.now() / 1000;
-
-        // If token is still valid for more than 10 minutes, don't refresh
-        if (decoded.exp - currentTime > 600) {
-          return NextResponse.json({ message: "Token still valid" });
-        }
-      } catch (error) {
-        // Access token is invalid, proceed to refresh
-      }
+    if (decoded.type !== "refresh") {
+      return NextResponse.json(
+        { error: "Invalid token type" },
+        { status: 401 }
+      );
     }
 
-    // In a real implementation, you would:
-    // 1. Verify the refresh token against your database
-    // 2. Generate a new access token
-    // 3. Set the new access token in cookies
+    await dbConnect();
 
-    // For now, we'll just return a success response
-    // You should replace this with your actual token refresh logic
+    // Find user and validate refresh token
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
 
-    // Example of setting new cookies (replace with your actual token generation)
-    const response = NextResponse.json({ message: "Session refreshed" });
+    if (!user.active) {
+      return NextResponse.json(
+        { error: "Account is deactivated" },
+        { status: 403 }
+      );
+    }
 
-    // Set new access token (you would generate a real token here)
-    response.cookies.set("accessToken", "new-access-token", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 60 * 60, // 1 hour
+    // Check if refresh token exists in user's refreshTokens array
+    if (!user.refreshTokens?.includes(refreshToken)) {
+      // Token has been invalidated (user logged out or token rotated)
+      return NextResponse.json(
+        { error: "Refresh token invalidated" },
+        { status: 401 }
+      );
+    }
+
+    // Generate new access token
+    const newAccessToken = jwt.sign(
+      {
+        id: user._id,
+        role: user.role,
+        email: user.email,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "15m" }
+    );
+
+    // Optionally generate new refresh token (rotation)
+    const newRefreshToken = jwt.sign(
+      {
+        id: user._id,
+        type: "refresh",
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    // Update refresh tokens in database
+    const currentTokens: string[] = Array.isArray(user.refreshTokens)
+      ? (user.refreshTokens as string[])
+      : [];
+    const filteredTokens: string[] = [];
+    currentTokens.forEach((token: string) => {
+      if (token !== refreshToken) {
+        filteredTokens.push(token);
+      }
+    });
+    user.refreshTokens = filteredTokens;
+    user.refreshTokens.push(newRefreshToken);
+
+    if (user.refreshTokens.length > 5) {
+      user.refreshTokens = user.refreshTokens.slice(-5);
+    }
+
+    await user.save();
+
+    const response = NextResponse.json({
+      user: {
+        _id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        phone: user.phone,
+        avatar: user.avatar,
+      },
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
     });
 
-    // Optionally refresh the refresh token as well
-    response.cookies.set("refreshToken", "new-refresh-token", {
+    // Set new cookies
+    response.cookies.set("accessToken", newAccessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      sameSite: "lax",
+      maxAge: 15 * 60,
+      path: "/",
+    });
+
+    response.cookies.set("refreshToken", newRefreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60,
+      path: "/",
     });
 
     return response;
   } catch (error) {
-    console.error("Error refreshing session:", error);
+    console.error("Token refresh error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
