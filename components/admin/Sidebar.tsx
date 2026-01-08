@@ -62,7 +62,6 @@ export function AdminSidebar() {
     glass: false,
     ophthalmology: false,
     finance: false,
-    medicine: false,
   });
 
   const pathname = usePathname();
@@ -145,19 +144,6 @@ export function AdminSidebar() {
           icon: <Calendar className="h-4 w-4" />,
           roles: ["admin", "staff"],
           badge: "8",
-        },
-      ],
-    },
-    {
-      title: "Medicine",
-      icon: <Pill className="h-5 w-5" />,
-      roles: ["admin", "staff"],
-      children: [
-        {
-          title: "Medicine Stock",
-          href: "/medicine/stock",
-          icon: <Package className="h-4 w-4" />,
-          roles: ["admin", "staff"],
         },
       ],
     },

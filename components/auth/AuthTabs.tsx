@@ -78,37 +78,6 @@ export default function AuthTabs({ redirect }: AuthTabsProps) {
           <RegisterForm />
         </TabsContent>
       </Tabs>
-
-      {/* Demo Credentials */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 text-sm">
-        <h3 className="font-medium text-blue-800 dark:text-blue-300 mb-2">
-          Demo Credentials
-        </h3>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <p className="font-medium text-gray-700 dark:text-gray-300">
-              Admin Account
-            </p>
-            <p className="text-gray-600 dark:text-gray-400">
-              Email: admin@glass.com
-            </p>
-            <p className="text-gray-600 dark:text-gray-400">
-              Password: Admin@123
-            </p>
-          </div>
-          <div>
-            <p className="font-medium text-gray-700 dark:text-gray-300">
-              Staff Account
-            </p>
-            <p className="text-gray-600 dark:text-gray-400">
-              Email: staff@glass.com
-            </p>
-            <p className="text-gray-600 dark:text-gray-400">
-              Password: Staff@123
-            </p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

@@ -21,21 +21,21 @@ export default function GlassStoreProvider({
         setLoading(true);
 
         // Fetch glass stock
-        const stockResponse = await fetch("/api/glass-stock");
+        const stockResponse = await fetch("/api/glass/stock");
         if (stockResponse.ok) {
           const stockData = await stockResponse.json();
           setGlassStock(stockData);
         }
 
         // Fetch orders
-        const ordersResponse = await fetch("/api/orders");
+        const ordersResponse = await fetch("/api/glass/orders");
         if (ordersResponse.ok) {
           const ordersData = await ordersResponse.json();
           setOrders(ordersData);
         }
 
         // Fetch glass issues
-        const issuesResponse = await fetch("/api/glass-issues");
+        const issuesResponse = await fetch("/api/glass/issues");
         if (issuesResponse.ok) {
           const issuesData = await issuesResponse.json();
           setGlassIssues(issuesData);
