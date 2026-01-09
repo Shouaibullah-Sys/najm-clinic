@@ -1,4 +1,3 @@
-// lib/models/GlassStock.ts
 import mongoose, { Schema, Types, model } from "mongoose";
 
 export interface IGlassStock {
@@ -7,8 +6,8 @@ export interface IGlassStock {
   glassType: string;
   thickness: number; // in mm
   color?: string;
-  width: number; // in cm or mm
-  height: number; // in cm or mm
+  width: number; // in cm
+  height: number; // in cm
   batchNumber: string;
   currentQuantity: number; // in square meters or pieces
   originalQuantity: number;
@@ -22,17 +21,17 @@ export interface IGlassStock {
 
 const glassStockSchema = new Schema<IGlassStock>(
   {
-    productName: { type: String, required: true },
-    glassType: { type: String, required: true }, // tempered, laminated, float, etc.
+    productName: { type: String, required: true, index: true },
+    glassType: { type: String, required: true, index: true }, // tempered, laminated, float, etc.
     thickness: { type: Number, required: true, min: 0.1 }, // in mm
     color: { type: String },
     width: { type: Number, required: true, min: 0.1 },
     height: { type: Number, required: true, min: 0.1 },
-    batchNumber: { type: String, required: true, unique: true },
+    batchNumber: { type: String, required: true, unique: true, index: true },
     currentQuantity: { type: Number, required: true, min: 0 },
     originalQuantity: { type: Number, required: true, min: 0 },
     unitPrice: { type: Number, required: true, min: 0 },
-    supplier: { type: String, required: true },
+    supplier: { type: String, required: true, index: true },
     warehouseLocation: { type: String },
     description: { type: String },
   },
@@ -54,6 +53,16 @@ glassStockSchema.virtual("totalArea").get(function () {
   const heightInMeters = this.height / 100; // assuming height in cm
   return (widthInMeters * heightInMeters * this.currentQuantity).toFixed(2);
 });
+
+// Add virtual for total value
+glassStockSchema.virtual("totalValue").get(function () {
+  return this.currentQuantity * this.unitPrice;
+});
+
+// Indexes for better query performance
+glassStockSchema.index({ currentQuantity: 1 }); // For low stock queries
+glassStockSchema.index({ glassType: 1, supplier: 1 }); // For filtering
+glassStockSchema.index({ createdAt: -1 }); // For recent items
 
 export const GlassStock =
   mongoose.models.GlassStock ||

@@ -1,7 +1,7 @@
-// components/glass/GlassStockTable.tsx
 "use client";
 
 import { useState } from "react";
+import { GlassStock } from "@/types/glass";
 import {
   Table,
   TableBody,
@@ -10,31 +10,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Edit, Trash2, Eye } from "lucide-react";
 import {
-  MoreHorizontal,
-  Search,
-  Plus,
-  Edit,
-  Trash2,
-  AlertTriangle,
-} from "lucide-react";
-import { GlassStock } from "@/types/glass";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface GlassStockTableProps {
   stock: GlassStock[];
-  onEdit?: (stock: GlassStock) => void;
-  onDelete?: (id: string) => void;
-  onAdd?: () => void;
+  onEdit: (item: GlassStock) => void;
+  onDelete: (id: string) => void;
+  onAdd: () => void;
 }
 
 export function GlassStockTable({
@@ -43,163 +37,166 @@ export function GlassStockTable({
   onDelete,
   onAdd,
 }: GlassStockTableProps) {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<GlassStock | null>(null);
 
-  const filteredStock = stock.filter(
-    (item) =>
-      item.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.barcode.includes(searchTerm)
-  );
-
-  const getTypeBadgeColor = (type: string) => {
-    const colors: Record<string, string> = {
-      "single-vision": "bg-blue-100 text-blue-800",
-      bifocal: "bg-green-100 text-green-800",
-      progressive: "bg-purple-100 text-purple-800",
-      photochromic: "bg-yellow-100 text-yellow-800",
-      "anti-reflective": "bg-indigo-100 text-indigo-800",
-      "blue-light": "bg-cyan-100 text-cyan-800",
-      tinted: "bg-pink-100 text-pink-800",
-      polarized: "bg-orange-100 text-orange-800",
-    };
-    return colors[type] || "bg-gray-100 text-gray-800";
+  const handleDeleteClick = (item: GlassStock) => {
+    setSelectedItem(item);
+    setDeleteDialogOpen(true);
   };
 
-  const getMaterialBadgeColor = (material: string) => {
-    const colors: Record<string, string> = {
-      "cr-39": "bg-blue-50 text-blue-700",
-      polycarbonate: "bg-gray-50 text-gray-700",
-      "high-index-1.67": "bg-purple-50 text-purple-700",
-      "high-index-1.74": "bg-indigo-50 text-indigo-700",
-      glass: "bg-green-50 text-green-700",
-      trivex: "bg-yellow-50 text-yellow-700",
-    };
-    return colors[material] || "bg-gray-50 text-gray-700";
+  const handleDeleteConfirm = () => {
+    if (selectedItem) {
+      onDelete(selectedItem.id);
+      setDeleteDialogOpen(false);
+      setSelectedItem(null);
+    }
+  };
+
+  const getStockStatus = (quantity: number, originalQuantity: number) => {
+    const percentage = (quantity / originalQuantity) * 100;
+    if (quantity <= 0)
+      return { label: "Out of Stock", color: "bg-red-100 text-red-800" };
+    if (percentage <= 20)
+      return { label: "Low Stock", color: "bg-orange-100 text-orange-800" };
+    if (percentage <= 50)
+      return { label: "Medium Stock", color: "bg-yellow-100 text-yellow-800" };
+    return { label: "In Stock", color: "bg-green-100 text-green-800" };
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Search className="h-4 w-4 text-gray-500" />
-          <Input
-            placeholder="Search by brand, model, or barcode..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-80"
-          />
-        </div>
-        {onAdd && (
-          <Button onClick={onAdd}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Stock
-          </Button>
-        )}
-      </div>
-
+    <>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Brand</TableHead>
-              <TableHead>Model</TableHead>
+              <TableHead>Product Name</TableHead>
               <TableHead>Type</TableHead>
-              <TableHead>Material</TableHead>
-              <TableHead>Sphere</TableHead>
-              <TableHead>Cylinder</TableHead>
-              <TableHead>Axis</TableHead>
-              <TableHead>Diameter</TableHead>
-              <TableHead>Stock</TableHead>
-              <TableHead>Price (AFN)</TableHead>
-              <TableHead className="w-[50px]"></TableHead>
+              <TableHead>Dimensions</TableHead>
+              <TableHead>Batch No.</TableHead>
+              <TableHead>Quantity</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Supplier</TableHead>
+              <TableHead>Unit Price</TableHead>
+              <TableHead>Total Value</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredStock.length === 0 ? (
+            {stock.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={11} className="text-center py-8">
-                  No stock items found
+                <TableCell colSpan={10} className="text-center py-8">
+                  <div className="flex flex-col items-center gap-2">
+                    <p className="text-gray-500">No stock items found</p>
+                    <Button onClick={onAdd} size="sm">
+                      Add Your First Stock Item
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (
-              filteredStock.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-medium">{item.brand}</TableCell>
-                  <TableCell>{item.model}</TableCell>
-                  <TableCell>
-                    <Badge className={getTypeBadgeColor(item.type)}>
-                      {item.type}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={getMaterialBadgeColor(item.material)}>
-                      {item.material}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{item.sphere}</TableCell>
-                  <TableCell>{item.cylinder}</TableCell>
-                  <TableCell>{item.axis}°</TableCell>
-                  <TableCell>{item.diameter}mm</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {item.stockQuantity <= item.minStockLevel && (
-                        <AlertTriangle className="h-4 w-4 text-red-500" />
-                      )}
-                      <span
-                        className={
-                          item.stockQuantity <= item.minStockLevel
-                            ? "text-red-600 font-medium"
-                            : ""
-                        }
-                      >
-                        {item.stockQuantity}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      <div className="font-medium">
-                        Sell: {item.sellingPrice.toLocaleString()}
+              stock.map((item) => {
+                const status = getStockStatus(
+                  item.currentQuantity,
+                  item.originalQuantity
+                );
+                return (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">
+                      <div className="space-y-1">
+                        <div>{item.productName}</div>
+                        {item.color && (
+                          <div className="text-sm text-gray-500">
+                            Color: {item.color}
+                          </div>
+                        )}
                       </div>
-                      <div className="text-gray-500">
-                        Cost: {item.costPrice.toLocaleString()}
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <div>{item.glassType}</div>
+                        <div className="text-sm text-gray-500">
+                          {item.thickness}mm
+                        </div>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
+                    </TableCell>
+                    <TableCell>
+                      {item.width} × {item.height} cm
+                    </TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {item.batchNumber}
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <div>
+                          {item.currentQuantity} / {item.originalQuantity}
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-blue-600 h-2 rounded-full"
+                            style={{
+                              width: `${item.remainingPercentage}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={status.color}>{status.label}</Badge>
+                    </TableCell>
+                    <TableCell>{item.supplier}</TableCell>
+                    <TableCell>{item.unitPrice.toLocaleString()} AFN</TableCell>
+                    <TableCell className="font-medium">
+                      {item.totalValue.toLocaleString()} AFN
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onEdit(item)}
+                        >
+                          <Edit className="h-4 w-4" />
                         </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        {onEdit && (
-                          <DropdownMenuItem onClick={() => onEdit(item)}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                        )}
-                        {onDelete && (
-                          <DropdownMenuItem
-                            onClick={() => onDelete(item.id)}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDeleteClick(item)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
       </div>
-    </div>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Stock Item</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete{" "}
+              <span className="font-semibold">{selectedItem?.productName}</span>
+              ? This action cannot be undone. Stock item will be permanently
+              removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

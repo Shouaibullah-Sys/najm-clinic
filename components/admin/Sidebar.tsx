@@ -107,43 +107,18 @@ export function AdminSidebar() {
           icon: <Scissors className="h-4 w-4" />,
           roles: ["admin", "staff"],
         },
-        {
-          title: "Customers",
-          href: "/glass/customers",
-          icon: <Users className="h-4 w-4" />,
-          roles: ["admin", "staff"],
-        },
-        {
-          title: "Suppliers",
-          href: "/glass/suppliers",
-          icon: <Home className="h-4 w-4" />,
-          roles: ["admin", "staff"],
-        },
       ],
     },
     {
       title: "Ophthalmology",
       icon: <Eye className="h-5 w-5" />,
-      roles: ["admin", "staff"],
+      roles: ["admin"],
       children: [
         {
           title: "Daily Records",
           href: "/ophthalmology/records",
           icon: <FileText className="h-4 w-4" />,
-          roles: ["admin", "staff"],
-        },
-        {
-          title: "Patients",
-          href: "/ophthalmology/patients",
-          icon: <Users className="h-4 w-4" />,
-          roles: ["admin", "staff"],
-        },
-        {
-          title: "Appointments",
-          href: "/ophthalmology/appointments",
-          icon: <Calendar className="h-4 w-4" />,
-          roles: ["admin", "staff"],
-          badge: "8",
+          roles: ["admin"],
         },
       ],
     },
@@ -177,12 +152,6 @@ export function AdminSidebar() {
           roles: ["admin", "staff"],
         },
       ],
-    },
-    {
-      title: "Analytics",
-      href: "/analytics",
-      icon: <BarChart3 className="h-5 w-5" />,
-      roles: ["admin"],
     },
     {
       title: "Users",

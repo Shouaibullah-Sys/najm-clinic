@@ -1,293 +1,191 @@
-// types/glass.ts
-
-// Glass Stock Types
-export type GlassType =
-  | "single-vision"
-  | "bifocal"
-  | "progressive"
-  | "photochromic"
-  | "anti-reflective"
-  | "blue-light"
-  | "tinted"
-  | "polarized";
-
-export type GlassMaterial =
-  | "cr-39"
-  | "polycarbonate"
-  | "high-index-1.67"
-  | "high-index-1.74"
-  | "glass"
-  | "trivex";
-
-export type GlassSphere =
-  | "-6.00"
-  | "-5.50"
-  | "-5.00"
-  | "-4.50"
-  | "-4.00"
-  | "-3.50"
-  | "-3.00"
-  | "-2.75"
-  | "-2.50"
-  | "-2.25"
-  | "-2.00"
-  | "-1.75"
-  | "-1.50"
-  | "-1.25"
-  | "-1.00"
-  | "-0.75"
-  | "-0.50"
-  | "-0.25"
-  | "0.00"
-  | "+0.25"
-  | "+0.50"
-  | "+0.75"
-  | "+1.00"
-  | "+1.25"
-  | "+1.50"
-  | "+1.75"
-  | "+2.00"
-  | "+2.25"
-  | "+2.50"
-  | "+2.75"
-  | "+3.00"
-  | "+3.50"
-  | "+4.00"
-  | "+4.50"
-  | "+5.00"
-  | "+5.50"
-  | "+6.00";
-
-export type GlassCylinder =
-  | "-2.00"
-  | "-1.75"
-  | "-1.50"
-  | "-1.25"
-  | "-1.00"
-  | "-0.75"
-  | "-0.50"
-  | "-0.25"
-  | "0.00"
-  | "+0.25"
-  | "+0.50"
-  | "+0.75"
-  | "+1.00"
-  | "+1.25"
-  | "+1.50"
-  | "+1.75"
-  | "+2.00";
-
-export type GlassAxis = number; // 0-180
-
-export type GlassDiameter = 50 | 55 | 60 | 65 | 70 | 75 | 80;
-
-export type GlassColor =
-  | "clear"
-  | "white"
-  | "brown"
-  | "grey"
-  | "green"
-  | "blue"
-  | "pink"
-  | "purple";
-
+// Stock Types
 export interface GlassStock {
   id: string;
-  barcode: string;
-  brand: string;
-  model: string;
-  type: GlassType;
-  material: GlassMaterial;
-  sphere: GlassSphere;
-  cylinder: GlassCylinder;
-  axis: GlassAxis;
-  diameter: GlassDiameter;
-  color: GlassColor;
-  stockQuantity: number;
-  minStockLevel: number;
-  costPrice: number;
-  sellingPrice: number;
-  supplierId: string;
+  productName: string;
+  glassType: string;
+  thickness: number;
+  color?: string;
+  width: number;
+  height: number;
+  batchNumber: string;
+  currentQuantity: number;
+  originalQuantity: number;
+  unitPrice: number;
+  supplier: string;
+  warehouseLocation?: string;
+  description?: string;
   createdAt: Date;
   updatedAt: Date;
+  remainingPercentage: number;
+  totalArea: string;
+  totalValue: number;
 }
 
 // Order Types
-export type OrderStatus =
-  | "pending"
-  | "confirmed"
-  | "processing"
-  | "ready"
-  | "delivered"
-  | "cancelled";
-
-export type OrderType = "new" | "repeat" | "repair" | "adjustment";
-
 export interface GlassOrder {
   id: string;
-  orderNumber: string;
-  customerId: string;
   customerName: string;
   customerPhone: string;
-  type: OrderType;
-  status: OrderStatus;
-  leftLens: {
-    sphere: GlassSphere;
-    cylinder: GlassCylinder;
-    axis: GlassAxis;
-    diameter: GlassDiameter;
-    type: GlassType;
-    material: GlassMaterial;
-    color: GlassColor;
-  };
-  rightLens: {
-    sphere: GlassSphere;
-    cylinder: GlassCylinder;
-    axis: GlassAxis;
-    diameter: GlassDiameter;
-    type: GlassType;
-    material: GlassMaterial;
-    color: GlassColor;
-  };
-  frame: {
-    brand: string;
-    model: string;
-    color: string;
-    size: string;
-  };
+  customerAddress?: string;
+  invoiceNumber: string; // This is correct
+  orderType: "retail" | "wholesale" | "contract";
+  items: OrderItem[];
   totalAmount: number;
-  paidAmount: number;
-  dueAmount: number;
-  notes: string;
-  createdBy: string;
-  assignedTo: string;
-  createdAt: Date;
-  updatedAt: Date;
-  expectedDeliveryDate: Date;
-}
-
-// Glass Issue Types
-export type IssueType =
-  | "scratch"
-  | "breakage"
-  | "wrong-prescription"
-  | "frame-damage"
-  | "lens-popping"
-  | "other";
-
-export type IssuePriority = "low" | "medium" | "high" | "urgent";
-
-export type IssueStatus = "open" | "in-progress" | "resolved" | "closed";
-
-export interface GlassIssue {
-  id: string;
-  issueNumber: string;
-  orderId?: string;
-  customerId: string;
-  customerName: string;
-  customerPhone: string;
-  type: IssueType;
-  priority: IssuePriority;
-  status: IssueStatus;
-  description: string;
-  resolution?: string;
-  assignedTo: string;
-  createdAt: Date;
-  updatedAt: Date;
-  resolvedAt?: Date;
-}
-
-// Customer Types
-export interface GlassCustomer {
-  id: string;
-  customerNumber: string;
-  name: string;
-  phone: string;
-  email?: string;
-  address?: string;
-  city?: string;
-  prescriptionHistory: PrescriptionRecord[];
-  totalOrders: number;
-  totalSpent: number;
+  amountPaid: number;
+  balanceDue: number;
+  paymentMethod: "cash" | "card" | "credit";
+  deliveryRequired: boolean;
+  deliveryAddress?: string;
+  installationRequired: boolean;
+  status:
+    | "pending"
+    | "processing"
+    | "completed"
+    | "delivered"
+    | "installed"
+    | "cancelled";
+  issuedBy: string;
   notes?: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface PrescriptionRecord {
-  id: string;
-  date: Date;
-  rightEye: {
-    sphere: GlassSphere;
-    cylinder: GlassCylinder;
-    axis: GlassAxis;
+export interface OrderItem {
+  glassProduct:
+    | string
+    | {
+        id: string;
+        productName: string;
+        batchNumber: string;
+        glassType: string;
+      };
+  quantity: number;
+  discount: number;
+  unitPrice: number;
+  cutToSize?: boolean;
+  dimensions?: {
+    width: number;
+    height: number;
   };
-  leftEye: {
-    sphere: GlassSphere;
-    cylinder: GlassCylinder;
-    axis: GlassAxis;
-  };
-  pd: number;
-  doctorName?: string;
-  clinicName?: string;
 }
 
-// Supplier Types
-export type SupplierStatus = "active" | "inactive" | "suspended";
-
-export interface GlassSupplier {
+// Issuance Types
+export interface GlassIssuance {
   id: string;
-  supplierCode: string;
-  name: string;
-  contactPerson: string;
-  phone: string;
-  email?: string;
-  address?: string;
-  city?: string;
-  products: string[];
-  totalOrders: number;
-  totalSpent: number;
-  paymentTerms: string;
-  status: SupplierStatus;
-  notes?: string;
+  issuanceNumber: string;
+  stockItemId: string;
+  stockItem?: {
+    id: string;
+    productName: string;
+    batchNumber: string;
+    glassType: string;
+  };
+  orderId: string;
+  orderNumber: string;
+  issuedQuantity: number;
+  issuedTo: string;
+  issuedBy: string;
+  issuedAt: Date;
+  remarks?: string;
+  status: "issued" | "returned" | "damaged";
+  returnDate?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
 
-// Dashboard Stats Types
+// Dashboard Stats
 export interface GlassDashboardStats {
-  totalStock: number;
-  lowStockItems: number;
+  // Order stats
   totalOrders: number;
   pendingOrders: number;
   todayOrders: number;
   monthlyRevenue: number;
-  monthlyExpenses: number;
-  customerCount: number;
-  supplierCount: number;
+
+  // Stock stats
+  totalStockItems: number;
+  totalStockValue: number;
+  totalStockArea: number;
+  lowStockItems: number;
+
+  // Issuance stats
+  issuedThisMonth: number;
+
+  // Customer stats
+  totalCustomers: number;
+  totalSuppliers: number;
 }
 
-// Filter Types
-export interface GlassStockFilter {
-  type?: GlassType;
-  material?: GlassMaterial;
-  sphere?: GlassSphere;
-  cylinder?: GlassCylinder;
-  brand?: string;
-  minStock?: number;
-  maxStock?: number;
-}
+// Form Schemas (using zod)
+import { z } from "zod";
 
-export interface OrderFilter {
-  status?: OrderStatus;
-  type?: OrderType;
-  customerId?: string;
-  dateFrom?: Date;
-  dateTo?: Date;
-}
+export const GlassStockSchema = z.object({
+  productName: z.string().min(2, "Product name must be at least 2 characters"),
+  glassType: z.string().min(1, "Glass type is required"),
+  thickness: z.coerce
+    .number()
+    .min(0.1, "Thickness must be at least 0.1mm")
+    .max(50, "Thickness cannot exceed 50mm"),
+  color: z.string().optional(),
+  width: z.coerce
+    .number()
+    .min(1, "Width must be at least 1cm")
+    .max(1000, "Width cannot exceed 1000cm"),
+  height: z.coerce
+    .number()
+    .min(1, "Height must be at least 1cm")
+    .max(1000, "Height cannot exceed 1000cm"),
+  batchNumber: z.string().min(1, "Batch number is required"),
+  currentQuantity: z.coerce.number().min(0, "Quantity must be at least 0"),
+  originalQuantity: z.coerce
+    .number()
+    .min(0, "Original quantity must be at least 0"),
+  unitPrice: z.coerce.number().min(0, "Unit price must be at least 0"),
+  supplier: z.string().min(2, "Supplier must be at least 2 characters"),
+  warehouseLocation: z.string().optional(),
+  description: z.string().optional(),
+});
 
-export interface IssueFilter {
-  status?: IssueStatus;
-  type?: IssueType;
-  priority?: IssuePriority;
-}
+export const OrderItemSchema = z.object({
+  glassProduct: z.string().min(1, "Product is required"),
+  quantity: z.coerce.number().min(1, "Quantity must be at least 1"),
+  discount: z.coerce.number().min(0).max(100).default(0),
+  unitPrice: z.coerce.number().min(0, "Unit price must be at least 0"),
+  cutToSize: z.boolean().default(false),
+  dimensions: z
+    .object({
+      width: z.coerce.number().min(0.1, "Width must be at least 0.1"),
+      height: z.coerce.number().min(0.1, "Height must be at least 0.1"),
+    })
+    .optional(),
+});
+
+export const OrderSchema = z.object({
+  customerName: z
+    .string()
+    .min(2, "Customer name must be at least 2 characters"),
+  customerPhone: z.string().min(10, "Valid phone number is required"),
+  customerAddress: z.string().optional(),
+  orderType: z.enum(["retail", "wholesale", "contract"]).default("retail"),
+  items: z.array(OrderItemSchema).min(1, "At least one item is required"),
+  amountPaid: z.coerce.number().min(0).default(0),
+  paymentMethod: z.enum(["cash", "card", "credit"]).default("cash"),
+  deliveryRequired: z.boolean().default(false),
+  deliveryAddress: z.string().optional(),
+  installationRequired: z.boolean().default(false),
+  status: z
+    .enum([
+      "pending",
+      "processing",
+      "completed",
+      "delivered",
+      "installed",
+      "cancelled",
+    ])
+    .default("pending"),
+  issuedBy: z.string().min(1, "Issued by is required"),
+  notes: z.string().optional(),
+});
+
+export type GlassStockFormValues = z.infer<typeof GlassStockSchema>;
+export type OrderFormValues = z.infer<typeof OrderSchema>;
+export type OrderItemFormValues = z.infer<typeof OrderItemSchema>;

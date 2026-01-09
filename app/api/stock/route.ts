@@ -1,3 +1,4 @@
+// app/api/stock/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import {
   getAllStock,
@@ -102,69 +103,6 @@ export async function POST(request: NextRequest) {
     console.error("Error creating stock item:", error);
     return NextResponse.json(
       { error: error.message || "Failed to create stock item" },
-      { status: 500 }
-    );
-  }
-}
-
-export async function PUT(request: NextRequest) {
-  try {
-    const searchParams = request.nextUrl.searchParams;
-    const id = searchParams.get("id");
-
-    if (!id) {
-      return NextResponse.json(
-        { error: "Stock item ID is required" },
-        { status: 400 }
-      );
-    }
-
-    const data = await request.json();
-    const updatedItem = await updateStockItem(id, data);
-
-    if (!updatedItem) {
-      return NextResponse.json(
-        { error: "Stock item not found" },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json(updatedItem);
-  } catch (error: any) {
-    console.error("Error updating stock item:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to update stock item" },
-      { status: 500 }
-    );
-  }
-}
-
-export async function DELETE(request: NextRequest) {
-  try {
-    const searchParams = request.nextUrl.searchParams;
-    const id = searchParams.get("id");
-
-    if (!id) {
-      return NextResponse.json(
-        { error: "Stock item ID is required" },
-        { status: 400 }
-      );
-    }
-
-    const success = await deleteStockItem(id);
-
-    if (!success) {
-      return NextResponse.json(
-        { error: "Stock item not found" },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error("Error deleting stock item:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to delete stock item" },
       { status: 500 }
     );
   }
