@@ -1,10 +1,23 @@
+// app/glass/orders/new/page.tsx
+
 "use client";
 
-import { useEffect, useState } from "react";
-import { GlassOrder, GlassIssuance } from "@/types/glass";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { GlassStock, OrderItemFormValues } from "@/types/glass";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -13,748 +26,727 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, Package, Eye, Edit, Trash2 } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { StockIssuanceDialog } from "@/components/glass/StockIssuanceDialog";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
+  DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import { MoreHorizontal } from "lucide-react";
-import Link from "next/link";
+import { Search, Plus, Trash2, ShoppingCart, X } from "lucide-react";
+import { toast } from "sonner";
 
-export default function GlassOrdersPage() {
-  const [orders, setOrders] = useState<GlassOrder[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function NewOrderPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [issuanceDialogOpen, setIssuanceDialogOpen] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<GlassOrder | null>(null);
-  const [viewOrderDialogOpen, setViewOrderDialogOpen] = useState(false);
-  const [selectedViewOrder, setSelectedViewOrder] = useState<GlassOrder | null>(
-    null
-  );
-  const [editOrderDialogOpen, setEditOrderDialogOpen] = useState(false);
-  const [orderIssuances, setOrderIssuances] = useState<GlassIssuance[]>([]);
+  const [stockItems, setStockItems] = useState<GlassStock[]>([]);
+  const [filteredStock, setFilteredStock] = useState<GlassStock[]>([]);
+  const [showStockDialog, setShowStockDialog] = useState(false);
+
+  // Order form state
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerAddress, setCustomerAddress] = useState("");
+  const [orderType, setOrderType] = useState<
+    "retail" | "wholesale" | "contract"
+  >("retail");
+  const [paymentMethod, setPaymentMethod] = useState<
+    "cash" | "card" | "credit"
+  >("cash");
+  const [amountPaid, setAmountPaid] = useState<string>("0");
+  const [deliveryRequired, setDeliveryRequired] = useState(false);
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [installationRequired, setInstallationRequired] = useState(false);
+  const [notes, setNotes] = useState("");
+
+  // Cart/selected items
+  const [cartItems, setCartItems] = useState<
+    Array<{
+      stockItem: GlassStock;
+      quantity: number;
+      discount: number;
+      cutToSize: boolean;
+      dimensions?: { width: number; height: number };
+    }>
+  >([]);
 
   useEffect(() => {
-    fetchOrders();
+    fetchStockItems();
   }, []);
 
-  const fetchOrders = async () => {
+  useEffect(() => {
+    if (searchTerm) {
+      const filtered = stockItems.filter(
+        (item) =>
+          item.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.glassType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.batchNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.supplier.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredStock(filtered);
+    } else {
+      setFilteredStock(stockItems.slice(0, 20)); // Show first 20 items
+    }
+  }, [searchTerm, stockItems]);
+
+  const fetchStockItems = async () => {
     try {
-      const response = await fetch("/api/orders");
+      const response = await fetch("/api/glass/stock");
       if (response.ok) {
         const data = await response.json();
-        setOrders(data);
+        setStockItems(data);
+        setFilteredStock(data.slice(0, 20));
       }
     } catch (error) {
-      console.error("Error fetching orders:", error);
+      console.error("Error fetching stock:", error);
+      toast("Error", {
+        description: "Failed to load stock items",
+      });
+    }
+  };
+
+  const addToCart = (item: GlassStock) => {
+    // Check if item already in cart
+    const existingIndex = cartItems.findIndex(
+      (cartItem) => cartItem.stockItem.id === item.id
+    );
+
+    if (existingIndex >= 0) {
+      // Increase quantity if already in cart
+      const updatedCart = [...cartItems];
+      updatedCart[existingIndex].quantity += 1;
+      setCartItems(updatedCart);
+    } else {
+      // Add new item to cart
+      setCartItems([
+        ...cartItems,
+        {
+          stockItem: item,
+          quantity: 1,
+          discount: 0,
+          cutToSize: false,
+        },
+      ]);
+    }
+
+    toast("Added to order", {
+      description: `${item.productName} added to order`,
+    });
+  };
+
+  const removeFromCart = (index: number) => {
+    const updatedCart = [...cartItems];
+    updatedCart.splice(index, 1);
+    setCartItems(updatedCart);
+  };
+
+  const updateCartItem = (index: number, updates: any) => {
+    const updatedCart = [...cartItems];
+    updatedCart[index] = { ...updatedCart[index], ...updates };
+    setCartItems(updatedCart);
+  };
+
+  const calculateItemTotal = (item: (typeof cartItems)[0]) => {
+    const basePrice = item.quantity * item.stockItem.unitPrice;
+    const discountAmount = basePrice * (item.discount / 100);
+    return basePrice - discountAmount;
+  };
+
+  const calculateOrderTotal = () => {
+    return cartItems.reduce(
+      (total, item) => total + calculateItemTotal(item),
+      0
+    );
+  };
+
+  const handleSubmit = async () => {
+    // Validation
+    if (!customerName || !customerPhone) {
+      toast("Validation Error", {
+        description: "Customer name and phone are required",
+      });
+      return;
+    }
+
+    if (cartItems.length === 0) {
+      toast("Validation Error", {
+        description: "Please add at least one item to the order",
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const orderData = {
+        customerName,
+        customerPhone,
+        customerAddress,
+        orderType,
+        items: cartItems.map((item) => ({
+          glassProduct: item.stockItem.id,
+          quantity: item.quantity,
+          discount: item.discount,
+          unitPrice: item.stockItem.unitPrice,
+          cutToSize: item.cutToSize,
+          dimensions: item.dimensions,
+        })),
+        amountPaid: parseFloat(amountPaid) || 0,
+        paymentMethod,
+        deliveryRequired,
+        deliveryAddress: deliveryRequired ? deliveryAddress : undefined,
+        installationRequired,
+        issuedBy: "current-user-id", // Replace with actual user ID
+        notes,
+        status: "pending",
+      };
+
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(orderData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create order");
+      }
+
+      const order = await response.json();
+
+      toast("Order Created", {
+        description: `Order ${order.invoiceNumber} created successfully`,
+      });
+
+      // Redirect to orders page
+      router.push("/glass/orders");
+    } catch (error: any) {
+      console.error("Error creating order:", error);
+      toast("Error", {
+        description: error.message || "Failed to create order",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchOrderIssuances = async (orderId: string) => {
-    try {
-      const response = await fetch(`/api/orders/${orderId}?issuances=true`);
-      if (response.ok) {
-        const data = await response.json();
-        setOrderIssuances(data);
-      }
-    } catch (error) {
-      console.error("Error fetching issuances:", error);
-    }
-  };
-
-  const filteredOrders = orders.filter(
-    (order) =>
-      order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customerPhone.includes(searchTerm)
-  );
-
-  const getStatusBadgeColor = (status: string) => {
-    const colors: Record<string, string> = {
-      pending: "bg-yellow-100 text-yellow-800",
-      processing: "bg-blue-100 text-blue-800",
-      completed: "bg-green-100 text-green-800",
-      delivered: "bg-purple-100 text-purple-800",
-      installed: "bg-indigo-100 text-indigo-800",
-      cancelled: "bg-red-100 text-red-800",
-    };
-    return colors[status] || "bg-gray-100 text-gray-800";
-  };
-
-  const getTypeBadgeColor = (type: string) => {
-    const colors: Record<string, string> = {
-      retail: "bg-blue-100 text-blue-800",
-      wholesale: "bg-green-100 text-green-800",
-      contract: "bg-purple-100 text-purple-800",
-    };
-    return colors[type] || "bg-gray-100 text-gray-800";
-  };
-
-  const handleIssueStock = (order: GlassOrder) => {
-    setSelectedOrder(order);
-    setIssuanceDialogOpen(true);
-  };
-
-  const handleViewOrder = async (order: GlassOrder) => {
-    setSelectedViewOrder(order);
-    await fetchOrderIssuances(order.id);
-    setViewOrderDialogOpen(true);
-  };
-
-  const handleEditOrder = (order: GlassOrder) => {
-    setSelectedViewOrder(order);
-    setEditOrderDialogOpen(true);
-  };
-
-  const handleDeleteOrder = async (orderId: string) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this order? This action cannot be undone."
-      )
-    )
-      return;
-
-    try {
-      const response = await fetch(`/api/orders/${orderId}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        fetchOrders();
-        alert("Order deleted successfully");
-      }
-    } catch (error) {
-      console.error("Error deleting order:", error);
-      alert("Failed to delete order");
-    }
-  };
-
-  const handleOrderStatusUpdate = async (
-    orderId: string,
-    newStatus: string
-  ) => {
-    try {
-      const response = await fetch(`/api/orders/${orderId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (response.ok) {
-        fetchOrders();
-        alert(`Order status updated to ${newStatus}`);
-      }
-    } catch (error) {
-      console.error("Error updating order status:", error);
-      alert("Failed to update order status");
-    }
-  };
-
-  const calculateTotalItems = (items: any[]) => {
-    return items.reduce((sum, item) => sum + item.quantity, 0);
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-500">Loading orders...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Glass Orders</h2>
-          <p className="text-gray-500">
-            Manage customer orders and issue stock
+          <h2 className="text-3xl font-bold tracking-tight">
+            Create New Order
+          </h2>
+          <p className="text-gray-500 dark:text-gray-400">
+            Add customer details and select glass items from stock
           </p>
         </div>
-        <Link href="/glass/orders/new">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            New Order
-          </Button>
-        </Link>
+        <Button
+          onClick={handleSubmit}
+          disabled={loading || cartItems.length === 0}
+        >
+          {loading ? "Creating..." : "Create Order"}
+        </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Orders List</CardTitle>
-            <div className="flex items-center gap-2">
-              <Search className="h-4 w-4 text-gray-500" />
-              <Input
-                placeholder="Search by customer name, invoice number, or phone..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-80"
-              />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Invoice #</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Items</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Due</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredOrders.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8">
-                      <div className="flex flex-col items-center gap-2">
-                        <p className="text-gray-500">No orders found</p>
-                        <Link href="/glass/orders/new">
-                          <Button size="sm">Create Your First Order</Button>
-                        </Link>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredOrders.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <span>{order.invoiceNumber}</span>
-                          {order.deliveryRequired && (
-                            <Badge className="bg-blue-100 text-blue-800 text-xs">
-                              Delivery
-                            </Badge>
-                          )}
-                          {order.installationRequired && (
-                            <Badge className="bg-green-100 text-green-800 text-xs">
-                              Installation
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">
-                            {order.customerName}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {order.customerPhone}
-                          </div>
-                          {order.customerAddress && (
-                            <div className="text-xs text-gray-400 truncate max-w-50">
-                              {order.customerAddress}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getTypeBadgeColor(order.orderType)}>
-                          {order.orderType}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getStatusBadgeColor(order.status)}>
-                          {order.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {calculateTotalItems(order.items)} items
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {order.totalAmount.toLocaleString()} AFN
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className={
-                            order.balanceDue > 0
-                              ? "text-red-600 font-medium"
-                              : "text-green-600"
-                          }
-                        >
-                          {order.balanceDue.toLocaleString()} AFN
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(order.createdAt).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleIssueStock(order)}
-                            disabled={
-                              order.status === "delivered" ||
-                              order.status === "cancelled" ||
-                              order.status === "completed"
-                            }
-                            className="h-8 px-3"
-                            title="Issue stock from inventory"
-                          >
-                            <Package className="h-4 w-4 mr-1" />
-                            Issue
-                          </Button>
-
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Open menu</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() => handleViewOrder(order)}
-                              >
-                                <Eye className="h-4 w-4 mr-2" />
-                                View Details
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleEditOrder(order)}
-                              >
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit Order
-                              </DropdownMenuItem>
-
-                              <DropdownMenuSeparator />
-
-                              <div className="px-2 py-1.5 text-xs font-medium text-gray-500">
-                                Update Status
-                              </div>
-
-                              {order.status === "processing" && (
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    handleOrderStatusUpdate(
-                                      order.id,
-                                      "completed"
-                                    )
-                                  }
-                                >
-                                  <Badge className="bg-green-100 text-green-800 mr-2 px-1">
-                                    ✓
-                                  </Badge>
-                                  Mark as Completed
-                                </DropdownMenuItem>
-                              )}
-                              {order.status === "completed" && (
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    handleOrderStatusUpdate(
-                                      order.id,
-                                      "delivered"
-                                    )
-                                  }
-                                >
-                                  <Badge className="bg-blue-100 text-blue-800 mr-2 px-1">
-                                    ✓
-                                  </Badge>
-                                  Mark as Delivered
-                                </DropdownMenuItem>
-                              )}
-                              {order.status === "delivered" &&
-                                order.installationRequired && (
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      handleOrderStatusUpdate(
-                                        order.id,
-                                        "installed"
-                                      )
-                                    }
-                                  >
-                                    <Badge className="bg-purple-100 text-purple-800 mr-2 px-1">
-                                      ✓
-                                    </Badge>
-                                    Mark as Installed
-                                  </DropdownMenuItem>
-                                )}
-                              {order.status !== "cancelled" && (
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    handleOrderStatusUpdate(
-                                      order.id,
-                                      "cancelled"
-                                    )
-                                  }
-                                  className="text-red-600"
-                                >
-                                  <Badge className="bg-red-100 text-red-800 mr-2 px-1">
-                                    ×
-                                  </Badge>
-                                  Cancel Order
-                                </DropdownMenuItem>
-                              )}
-
-                              <DropdownMenuSeparator />
-
-                              <DropdownMenuItem
-                                onClick={() => handleDeleteOrder(order.id)}
-                                className="text-red-600"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete Order
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Stock Issuance Dialog */}
-      {selectedOrder && (
-        <StockIssuanceDialog
-          open={issuanceDialogOpen}
-          onOpenChange={setIssuanceDialogOpen}
-          order={selectedOrder}
-          onSuccess={() => {
-            fetchOrders(); // Refresh orders after successful issuance
-          }}
-        />
-      )}
-
-      {/* View Order Details Dialog */}
-      <Dialog open={viewOrderDialogOpen} onOpenChange={setViewOrderDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              Order Details - {selectedViewOrder?.invoiceNumber}
-            </DialogTitle>
-            <DialogDescription>Complete order information</DialogDescription>
-          </DialogHeader>
-
-          {selectedViewOrder && (
-            <div className="space-y-6">
-              {/* Customer Information */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">
-                      Customer Information
-                    </h3>
-                    <div className="border rounded-md p-4 space-y-2">
-                      <div className="font-medium text-lg">
-                        {selectedViewOrder.customerName}
-                      </div>
-                      <div className="text-sm">
-                        <span className="text-gray-500">Phone:</span>{" "}
-                        {selectedViewOrder.customerPhone}
-                      </div>
-                      {selectedViewOrder.customerAddress && (
-                        <div className="text-sm">
-                          <span className="text-gray-500">Address:</span>{" "}
-                          {selectedViewOrder.customerAddress}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">
-                      Order Information
-                    </h3>
-                    <div className="border rounded-md p-4 grid grid-cols-2 gap-3">
-                      <div>
-                        <div className="text-xs text-gray-500">Status</div>
-                        <Badge
-                          className={getStatusBadgeColor(
-                            selectedViewOrder.status
-                          )}
-                        >
-                          {selectedViewOrder.status}
-                        </Badge>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500">Type</div>
-                        <Badge
-                          className={getTypeBadgeColor(
-                            selectedViewOrder.orderType
-                          )}
-                        >
-                          {selectedViewOrder.orderType}
-                        </Badge>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500">Created</div>
-                        <div className="text-sm">
-                          {new Date(
-                            selectedViewOrder.createdAt
-                          ).toLocaleDateString()}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500">Payment</div>
-                        <div className="text-sm">
-                          {selectedViewOrder.paymentMethod}
-                        </div>
-                      </div>
-                      <div className="col-span-2">
-                        <div className="text-xs text-gray-500">Delivery</div>
-                        <div className="text-sm">
-                          {selectedViewOrder.deliveryRequired
-                            ? `Required${
-                                selectedViewOrder.deliveryAddress
-                                  ? ` (${selectedViewOrder.deliveryAddress})`
-                                  : ""
-                              }`
-                            : "Not Required"}
-                        </div>
-                      </div>
-                      {selectedViewOrder.installationRequired && (
-                        <div className="col-span-2">
-                          <div className="text-xs text-gray-500">
-                            Installation
-                          </div>
-                          <div className="text-sm">Required</div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Customer & Order Details */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Customer Information Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Customer Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="customerName">Customer Name *</Label>
+                  <Input
+                    id="customerName"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder="Enter customer name"
+                    required
+                  />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="customerPhone">Phone Number *</Label>
+                  <Input
+                    id="customerPhone"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    placeholder="Enter phone number"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="customerAddress">Address</Label>
+                <Input
+                  id="customerAddress"
+                  value={customerAddress}
+                  onChange={(e) => setCustomerAddress(e.target.value)}
+                  placeholder="Enter customer address"
+                />
+              </div>
+            </CardContent>
+          </Card>
 
-                {/* Financial Information */}
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">
-                      Financial Information
-                    </h3>
-                    <div className="border rounded-md p-4 space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-500">Total Amount:</span>
-                        <span className="font-medium text-lg">
-                          {selectedViewOrder.totalAmount.toLocaleString()} AFN
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-500">Amount Paid:</span>
-                        <span className="font-medium text-green-600">
-                          {selectedViewOrder.amountPaid.toLocaleString()} AFN
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center border-t pt-3">
-                        <span className="text-gray-500 font-medium">
-                          Balance Due:
-                        </span>
-                        <span
-                          className={`font-bold text-lg ${
-                            selectedViewOrder.balanceDue > 0
-                              ? "text-red-600"
-                              : "text-green-600"
-                          }`}
-                        >
-                          {selectedViewOrder.balanceDue.toLocaleString()} AFN
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-500">Payment Status:</span>
-                        <Badge
-                          className={
-                            selectedViewOrder.balanceDue === 0
-                              ? "bg-green-100 text-green-800"
-                              : "bg-yellow-100 text-yellow-800"
-                          }
-                        >
-                          {selectedViewOrder.balanceDue === 0
-                            ? "Paid in Full"
-                            : "Partial Payment"}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Issued Stock */}
-                  {orderIssuances.length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500 mb-2">
-                        Issued Stock ({orderIssuances.length})
-                      </h3>
-                      <div className="border rounded-md p-4 space-y-2 max-h-60 overflow-y-auto">
-                        {orderIssuances.map((issuance) => (
-                          <div
-                            key={issuance.id}
-                            className="flex justify-between items-center text-sm border-b pb-2 last:border-0 last:pb-0"
-                          >
-                            <div>
-                              <div className="font-medium">
-                                {issuance.issuanceNumber}
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                Qty: {issuance.issuedQuantity}
-                              </div>
-                            </div>
-                            <Badge
-                              className={
-                                issuance.status === "issued"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : issuance.status === "returned"
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-red-100 text-red-800"
-                              }
-                            >
-                              {issuance.status}
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+          {/* Order Details Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Order Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="orderType">Order Type</Label>
+                  <Select
+                    value={orderType}
+                    onValueChange={(value: any) => setOrderType(value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="retail">Retail</SelectItem>
+                      <SelectItem value="wholesale">Wholesale</SelectItem>
+                      <SelectItem value="contract">Contract</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="paymentMethod">Payment Method</Label>
+                  <Select
+                    value={paymentMethod}
+                    onValueChange={(value: any) => setPaymentMethod(value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="card">Card</SelectItem>
+                      <SelectItem value="credit">Credit</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="amountPaid">Amount Paid (AFN)</Label>
+                  <Input
+                    id="amountPaid"
+                    type="number"
+                    value={amountPaid}
+                    onChange={(e) => setAmountPaid(e.target.value)}
+                    placeholder="0"
+                    min="0"
+                  />
                 </div>
               </div>
 
-              {/* Order Items */}
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-2">
-                  Order Items ({selectedViewOrder.items.length})
-                </h3>
-                <div className="border rounded-md overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Product</TableHead>
-                        <TableHead>Dimensions</TableHead>
-                        <TableHead>Quantity</TableHead>
-                        <TableHead>Unit Price</TableHead>
-                        <TableHead>Discount</TableHead>
-                        <TableHead>Total</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {selectedViewOrder.items.map((item, index) => (
-                        <TableRow key={index}>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">
-                                {typeof item.glassProduct === "object"
-                                  ? item.glassProduct.productName
-                                  : "Product ID: " + item.glassProduct}
-                              </div>
-                              {item.cutToSize && (
-                                <Badge className="bg-blue-100 text-blue-800 text-xs mt-1">
-                                  Cut to Size
-                                </Badge>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {item.dimensions ? (
-                              <div className="text-sm">
-                                {item.dimensions.width} ×{" "}
-                                {item.dimensions.height} cm
-                              </div>
-                            ) : (
-                              <span className="text-gray-400"> -</span>
-                            )}
-                          </TableCell>
-                          <TableCell>{item.quantity}</TableCell>
-                          <TableCell>
-                            {item.unitPrice.toLocaleString()} AFN
-                          </TableCell>
-                          <TableCell>{item.discount}%</TableCell>
-                          <TableCell className="font-medium">
-                            {(
-                              item.quantity *
-                              item.unitPrice *
-                              (1 - item.discount / 100)
-                            ).toLocaleString()}{" "}
-                            AFN
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="deliveryRequired"
+                    checked={deliveryRequired}
+                    onChange={(e) => setDeliveryRequired(e.target.checked)}
+                    className="rounded border-gray-300"
+                  />
+                  <Label htmlFor="deliveryRequired">Delivery Required</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="installationRequired"
+                    checked={installationRequired}
+                    onChange={(e) => setInstallationRequired(e.target.checked)}
+                    className="rounded border-gray-300"
+                  />
+                  <Label htmlFor="installationRequired">
+                    Installation Required
+                  </Label>
                 </div>
               </div>
 
-              {/* Notes */}
-              {selectedViewOrder.notes && (
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">
-                    Notes
-                  </h3>
-                  <div className="border rounded-md p-4">
-                    <p className="text-sm whitespace-pre-wrap">
-                      {selectedViewOrder.notes}
-                    </p>
-                  </div>
+              {deliveryRequired && (
+                <div className="space-y-2">
+                  <Label htmlFor="deliveryAddress">Delivery Address</Label>
+                  <Input
+                    id="deliveryAddress"
+                    value={deliveryAddress}
+                    onChange={(e) => setDeliveryAddress(e.target.value)}
+                    placeholder="Enter delivery address"
+                  />
                 </div>
               )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
-      {/* Edit Order Dialog */}
-      <Dialog open={editOrderDialogOpen} onOpenChange={setEditOrderDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              Edit Order - {selectedViewOrder?.invoiceNumber}
-            </DialogTitle>
-            <DialogDescription>Update order details</DialogDescription>
-          </DialogHeader>
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes</Label>
+                <Textarea
+                  id="notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Any additional notes or instructions..."
+                  rows={3}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-          {selectedViewOrder && (
-            <div className="space-y-6">
-              <div className="text-center py-8">
-                <p className="text-gray-500">Edit form coming soon...</p>
+        {/* Right Column - Cart & Order Summary */}
+        <div className="space-y-6">
+          {/* Cart Summary Card */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Order Items</CardTitle>
+                <Badge variant="outline">{cartItems.length} items</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Dialog open={showStockDialog} onOpenChange={setShowStockDialog}>
+                <DialogTrigger asChild>
+                  <Button className="w-full" variant="outline">
+                    <Search className="h-4 w-4 mr-2" />
+                    Browse Stock Items
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Select Glass Items from Stock</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Search by product name, type, batch number, or supplier..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+
+                    <div className="border rounded-md overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Product</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Size</TableHead>
+                            <TableHead>Available</TableHead>
+                            <TableHead>Price</TableHead>
+                            <TableHead className="text-right">Action</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredStock.length === 0 ? (
+                            <TableRow>
+                              <TableCell
+                                colSpan={6}
+                                className="text-center py-8"
+                              >
+                                <div className="flex flex-col items-center gap-2">
+                                  <p className="text-gray-500">
+                                    No stock items found
+                                  </p>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setSearchTerm("")}
+                                  >
+                                    Clear Search
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            filteredStock.map((item) => (
+                              <TableRow key={item.id}>
+                                <TableCell>
+                                  <div className="font-medium">
+                                    {item.productName}
+                                  </div>
+                                  <div className="text-sm text-gray-500">
+                                    {item.batchNumber}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline">
+                                    {item.glassType}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  {item.width} × {item.height} cm
+                                </TableCell>
+                                <TableCell>
+                                  <div className="font-medium">
+                                    {item.currentQuantity}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {Math.round(item.remainingPercentage)}%
+                                    remaining
+                                  </div>
+                                </TableCell>
+                                <TableCell className="font-medium">
+                                  {item.unitPrice.toLocaleString()} AFN
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      addToCart(item);
+                                      setShowStockDialog(false);
+                                    }}
+                                    disabled={item.currentQuantity <= 0}
+                                  >
+                                    <Plus className="h-4 w-4 mr-1" />
+                                    Add
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              {cartItems.length === 0 ? (
+                <div className="text-center py-8 border rounded-md">
+                  <ShoppingCart className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                  <p className="text-gray-500">No items added yet</p>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Click "Browse Stock Items" to add items
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {cartItems.map((item, index) => (
+                    <div
+                      key={index}
+                      className="border rounded-md p-4 space-y-3"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <div className="font-medium">
+                            {item.stockItem.productName}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {item.stockItem.glassType} • {item.stockItem.width}{" "}
+                            × {item.stockItem.height} cm
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            Batch: {item.stockItem.batchNumber}
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => removeFromCart(index)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <Label
+                            htmlFor={`quantity-${index}`}
+                            className="text-xs"
+                          >
+                            Quantity
+                          </Label>
+                          <Input
+                            id={`quantity-${index}`}
+                            type="number"
+                            min="1"
+                            max={item.stockItem.currentQuantity}
+                            value={item.quantity}
+                            onChange={(e) =>
+                              updateCartItem(index, {
+                                quantity: parseInt(e.target.value) || 1,
+                              })
+                            }
+                            className="h-8"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label
+                            htmlFor={`discount-${index}`}
+                            className="text-xs"
+                          >
+                            Discount %
+                          </Label>
+                          <Input
+                            id={`discount-${index}`}
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={item.discount}
+                            onChange={(e) =>
+                              updateCartItem(index, {
+                                discount: parseFloat(e.target.value) || 0,
+                              })
+                            }
+                            className="h-8"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id={`cutToSize-${index}`}
+                          checked={item.cutToSize}
+                          onChange={(e) =>
+                            updateCartItem(index, {
+                              cutToSize: e.target.checked,
+                            })
+                          }
+                          className="rounded border-gray-300"
+                        />
+                        <Label
+                          htmlFor={`cutToSize-${index}`}
+                          className="text-sm"
+                        >
+                          Cut to Size
+                        </Label>
+                      </div>
+
+                      {item.cutToSize && (
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <Label
+                              htmlFor={`width-${index}`}
+                              className="text-xs"
+                            >
+                              Width (cm)
+                            </Label>
+                            <Input
+                              id={`width-${index}`}
+                              type="number"
+                              min="0.1"
+                              step="0.1"
+                              value={item.dimensions?.width || ""}
+                              onChange={(e) =>
+                                updateCartItem(index, {
+                                  dimensions: {
+                                    ...item.dimensions,
+                                    width: parseFloat(e.target.value) || 0,
+                                  },
+                                })
+                              }
+                              className="h-8"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label
+                              htmlFor={`height-${index}`}
+                              className="text-xs"
+                            >
+                              Height (cm)
+                            </Label>
+                            <Input
+                              id={`height-${index}`}
+                              type="number"
+                              min="0.1"
+                              step="0.1"
+                              value={item.dimensions?.height || ""}
+                              onChange={(e) =>
+                                updateCartItem(index, {
+                                  dimensions: {
+                                    ...item.dimensions,
+                                    height: parseFloat(e.target.value) || 0,
+                                  },
+                                })
+                              }
+                              className="h-8"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex justify-between items-center pt-2 border-t">
+                        <span className="text-sm text-gray-500">
+                          Item Total:
+                        </span>
+                        <span className="font-medium">
+                          {calculateItemTotal(item).toLocaleString()} AFN
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Order Summary Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Order Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Subtotal</span>
+                  <span>{calculateOrderTotal().toLocaleString()} AFN</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Amount Paid</span>
+                  <span className="text-green-600">
+                    {parseFloat(amountPaid || "0").toLocaleString()} AFN
+                  </span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
+                  <span className="font-medium">Balance Due</span>
+                  <span
+                    className={`font-bold text-lg ${
+                      calculateOrderTotal() - parseFloat(amountPaid || "0") > 0
+                        ? "text-red-600"
+                        : "text-green-600"
+                    }`}
+                  >
+                    {(
+                      calculateOrderTotal() - parseFloat(amountPaid || "0")
+                    ).toLocaleString()}{" "}
+                    AFN
+                  </span>
+                </div>
               </div>
 
-              <DialogFooter>
+              <div className="pt-4">
                 <Button
-                  variant="outline"
-                  onClick={() => setEditOrderDialogOpen(false)}
+                  onClick={handleSubmit}
+                  disabled={loading || cartItems.length === 0}
+                  className="w-full"
+                  size="lg"
                 >
-                  Cancel
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Creating Order...
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingCart className="h-5 w-5 mr-2" />
+                      Create Order
+                    </>
+                  )}
                 </Button>
-                <Button
-                  onClick={() => {
-                    setEditOrderDialogOpen(false);
-                    fetchOrders();
-                  }}
-                >
-                  Save Changes
-                </Button>
-              </DialogFooter>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
