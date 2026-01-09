@@ -11,6 +11,19 @@ export interface IExpense {
   category: string; // rent, utilities, supplies, maintenance, etc.
   description: string;
   recordedBy: Types.ObjectId;
+  status: "pending" | "approved" | "rejected" | "paid";
+  approvedBy?: Types.ObjectId;
+  approvedAt?: Date;
+  subcategory?: string;
+  paymentMethod?:
+    | "cash"
+    | "bank_transfer"
+    | "credit_card"
+    | "check"
+    | "mobile_payment";
+  receiptNumber?: string;
+  notes?: string;
+  tags?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -52,6 +65,35 @@ const expenseSchema = new Schema<IExpense>(
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
+    },
+    status: {
+      type: String,
+      enum: ["pending", "approved", "rejected", "paid"],
+      default: "pending",
+    },
+    approvedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+    approvedAt: {
+      type: Date,
+    },
+    subcategory: {
+      type: String,
+    },
+    paymentMethod: {
+      type: String,
+      enum: ["cash", "bank_transfer", "credit_card", "check", "mobile_payment"],
+    },
+    receiptNumber: {
+      type: String,
+    },
+    notes: {
+      type: String,
+    },
+    tags: {
+      type: [String],
+      default: [],
     },
   },
   {

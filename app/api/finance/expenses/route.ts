@@ -109,7 +109,6 @@ async function GETHandler(request: NextRequest, context: { user: any }) {
   // Fetch expenses
   const expenses = await Expense.find(query)
     .populate("recordedBy", "name email")
-    .populate("approvedBy", "name")
     .sort({ date: -1, createdAt: -1 })
     .lean();
 
@@ -125,7 +124,6 @@ async function GETHandler(request: NextRequest, context: { user: any }) {
       { label: "Receipt Number", value: "receiptNumber" },
       { label: "Status", value: "status" },
       { label: "Recorded By", value: "recordedBy.name" },
-      { label: "Approved By", value: "approvedBy.name" },
       { label: "Notes", value: "notes" },
     ];
 
@@ -136,7 +134,6 @@ async function GETHandler(request: NextRequest, context: { user: any }) {
         date: new Date(expense.date).toLocaleDateString(),
         amount: expense.amount.toFixed(2),
         recordedBy: (expense.recordedBy as any)?.name || "",
-        approvedBy: (expense.approvedBy as any)?.name || "",
       }))
     );
 
@@ -175,7 +172,6 @@ async function POSTHandler(request: NextRequest, context: { user: any }) {
   // Populate for response
   const populatedExpense = await Expense.findById(expense._id)
     .populate("recordedBy", "name email")
-    .populate("approvedBy", "name")
     .lean();
 
   return NextResponse.json(populatedExpense, { status: 201 });

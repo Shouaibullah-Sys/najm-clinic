@@ -89,23 +89,17 @@ export function AdminSidebar() {
       children: [
         {
           title: "Glass Stock",
-          href: "/glass/stock",
+          href: "/staff/glass/stock",
           icon: <Package className="h-4 w-4" />,
           roles: ["admin", "staff"],
           badge: user?.role === "staff" ? "3" : undefined,
         },
         {
           title: "Orders",
-          href: "/glass/orders",
+          href: "/staff/glass/orders",
           icon: <ShoppingCart className="h-4 w-4" />,
           roles: ["admin", "staff"],
           badge: "12",
-        },
-        {
-          title: "Glass Issues",
-          href: "/glass/issues",
-          icon: <Scissors className="h-4 w-4" />,
-          roles: ["admin", "staff"],
         },
       ],
     },
@@ -128,27 +122,9 @@ export function AdminSidebar() {
       roles: ["admin", "staff"],
       children: [
         {
-          title: "Daily Cash",
-          href: "/finance/daily-cash",
-          icon: <BarChart3 className="h-4 w-4" />,
-          roles: ["admin", "staff"],
-        },
-        {
-          title: "Cash at Hand",
-          href: "/finance/cash-hand",
-          icon: <DollarSign className="h-4 w-4" />,
-          roles: ["admin", "staff"],
-        },
-        {
           title: "Daily Expenses",
-          href: "/finance/expenses",
+          href: "/staff/expenses",
           icon: <CreditCard className="h-4 w-4" />,
-          roles: ["admin", "staff"],
-        },
-        {
-          title: "Reports",
-          href: "/finance/reports",
-          icon: <TrendingUp className="h-4 w-4" />,
           roles: ["admin", "staff"],
         },
       ],

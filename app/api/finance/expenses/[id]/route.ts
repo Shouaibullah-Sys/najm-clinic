@@ -8,7 +8,7 @@ import mongoose from "mongoose";
 // PUT: Update expense
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await dbConnect();
@@ -19,7 +19,7 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
+    const { id } = await params;
     const data = await request.json();
 
     // Validate ObjectId
@@ -82,7 +82,6 @@ export async function PUT(
     // Populate user data for response
     const populatedExpense = await Expense.findById(expense._id)
       .populate("recordedBy", "name email")
-      .populate("approvedBy", "name")
       .lean();
 
     return NextResponse.json(populatedExpense);
@@ -98,7 +97,7 @@ export async function PUT(
 // DELETE: Delete expense
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await dbConnect();
@@ -112,7 +111,7 @@ export async function DELETE(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     // Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {

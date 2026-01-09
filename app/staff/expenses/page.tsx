@@ -38,6 +38,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useAuthStore } from "@/store/useAuthStore";
+import Cookies from "universal-cookie";
 import {
   Select,
   SelectContent,
@@ -254,7 +255,23 @@ const SUBCATEGORIES: Record<
   ],
 };
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const cookies = new Cookies();
+
+const getAuthHeaders = () => {
+  const token = cookies.get("accessToken");
+  return {
+    "Content-Type": "application/json",
+    ...(token && { Authorization: `Bearer ${token}` }),
+  };
+};
+
+const fetcher = (url: string) =>
+  fetch(url, { credentials: "include" }).then((res) => {
+    if (!res.ok) {
+      return res.json().then((err) => Promise.reject(err));
+    }
+    return res.json();
+  });
 
 export default function GlassStoreExpenses() {
   const { user } = useAuthStore();
@@ -351,7 +368,7 @@ export default function GlassStoreExpenses() {
           (c) => c.value === row.original.category
         );
         return (
-          <div className="max-w-[100px] truncate hidden sm:table-cell">
+          <div className="max-w-25 truncate hidden sm:table-cell">
             {categoryData?.label || row.original.category}
           </div>
         );
@@ -540,8 +557,10 @@ export default function GlassStoreExpenses() {
 
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/finance/expenses?id=${id}`, {
+      const response = await fetch(`/api/finance/expenses/${id}`, {
         method: "DELETE",
+        credentials: "include",
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {
@@ -567,7 +586,8 @@ export default function GlassStoreExpenses() {
     try {
       const response = await fetch(`/api/finance/expenses/${id}/status`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        headers: getAuthHeaders(),
         body: JSON.stringify({ status: newStatus }),
       });
 
@@ -607,14 +627,15 @@ export default function GlassStoreExpenses() {
       };
 
       const url = currentExpense
-        ? `/api/finance/expenses?id=${currentExpense._id}`
+        ? `/api/finance/expenses/${currentExpense._id}`
         : "/api/finance/expenses";
 
       const method = currentExpense ? "PUT" : "POST";
 
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        headers: getAuthHeaders(),
         body: JSON.stringify(expenseData),
       });
 
@@ -641,7 +662,10 @@ export default function GlassStoreExpenses() {
 
   const handleExport = async (): Promise<void> => {
     try {
-      const response = await fetch(`${apiUrl}&export=csv`);
+      const response = await fetch(`${apiUrl}&export=csv`, {
+        credentials: "include",
+        headers: getAuthHeaders(),
+      });
       if (!response.ok) throw new Error("Failed to export");
 
       const blob = await response.blob();

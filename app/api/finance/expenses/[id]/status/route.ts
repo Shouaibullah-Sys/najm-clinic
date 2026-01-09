@@ -46,19 +46,14 @@ export async function PATCH(
       return NextResponse.json({ error: "Expense not found" }, { status: 404 });
     }
 
-    // Update status and set approvedBy/approvedAt if approving/rejecting
+    // Update status
     expense.status = status;
-    if (["approved", "rejected"].includes(status)) {
-      expense.approvedBy = authResult.user._id;
-      expense.approvedAt = new Date();
-    }
 
     await expense.save();
 
     // Populate user data for response
     const populatedExpense = await Expense.findById(expense._id)
       .populate("recordedBy", "name email")
-      .populate("approvedBy", "name")
       .lean();
 
     return NextResponse.json(populatedExpense);
