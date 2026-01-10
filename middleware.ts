@@ -95,61 +95,23 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next();
     }
 
-    // CEO access
-    if (role === "ceo") {
-      if (path.startsWith("/ceo")) {
+    // Staff access to staff routes
+    if (role === "staff") {
+      if (path.startsWith("/staff")) {
         return NextResponse.next();
       }
       if (path.startsWith("/dashboard")) {
-        return NextResponse.redirect(new URL("/ceo/dashboard", request.url));
+        return NextResponse.redirect(new URL("/staff/dashboard", request.url));
       }
 
-      // Log unauthorized CEO access attempt
+      // Log unauthorized staff access attempt
       await logMiddlewareActivity(
         userId,
         "authorization",
         `Attempted to access unauthorized route: ${path}`,
         "Route",
         request,
-        { requiredRole: "ceo", userRole: role }
-      );
-
-      return NextResponse.redirect(new URL("/unauthorized", request.url));
-    }
-
-    // Laboratory routes
-    if (path.startsWith("/laboratory")) {
-      if (role === "laboratory") {
-        return NextResponse.next();
-      }
-
-      // Log unauthorized laboratory access attempt
-      await logMiddlewareActivity(
-        userId,
-        "authorization",
-        `Attempted to access laboratory route without permission: ${path}`,
-        "Route",
-        request,
-        { requiredRole: "laboratory", userRole: role }
-      );
-
-      return NextResponse.redirect(new URL("/unauthorized", request.url));
-    }
-
-    // Pharmacy routes - allow both pharmacy and admin
-    if (path.startsWith("/pharmacy")) {
-      if (role === "pharmacy") {
-        return NextResponse.next();
-      }
-
-      // Log unauthorized pharmacy access attempt
-      await logMiddlewareActivity(
-        userId,
-        "authorization",
-        `Attempted to access pharmacy route without permission: ${path}`,
-        "Route",
-        request,
-        { requiredRole: "pharmacy", userRole: role }
+        { requiredRole: "staff", userRole: role }
       );
 
       return NextResponse.redirect(new URL("/unauthorized", request.url));
@@ -188,9 +150,7 @@ export const config = {
   matcher: [
     "/dashboard",
     "/admin/:path*",
-    "/laboratory/:path*",
-    "/pharmacy/:path*",
-    "/ceo/:path*",
+    "/staff/:path*",
     "/dashboard/:path*",
   ],
 };
