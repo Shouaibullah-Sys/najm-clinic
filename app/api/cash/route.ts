@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
-import dbConnect from "@/lib/mongodb";
+import { getServerSession } from "@/lib/auth";
+import dbConnect from "@/lib/dbConnect";
 import { CashAtHand } from "@/lib/models";
 import { cashCreateSchema } from "@/lib/validations";
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getSession();
+    const session = await getServerSession();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     // Role-based filtering
     if (session.user.role === "staff") {
-      query.staffId = session.user.id;
+      query.staffId = session.user._id;
     }
 
     // Date filtering
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
+    const session = await getServerSession();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     const cashRecord = new CashAtHand({
       ...validatedData,
-      staffId: session.user.id,
+      staffId: session.user._id,
       date: validatedData.date || new Date(),
     });
 

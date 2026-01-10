@@ -49,7 +49,7 @@ async function dbConnect() {
   return cached.conn;
 }
 
-// Export MongoDB client for Better Auth adapter - lazily initialized
+// Export MongoDB client - lazily initialized
 let mongoClientInstance: MongoClient | null = null;
 
 export async function getMongoClient(): Promise<MongoClient> {
@@ -66,5 +66,5 @@ export async function getMongoClient(): Promise<MongoClient> {
 // For backward compatibility
 export default dbConnect;
 
-// Export client as a getter function for better-auth adapter
+// Export client as a getter function
 export const client = (): Promise<MongoClient> => getMongoClient();

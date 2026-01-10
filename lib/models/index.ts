@@ -3,9 +3,9 @@ export { User, type IUser } from "./User";
 export { default as Session, type ISession } from "./Session";
 export { CashAtHand, type ICashAtHand } from "./CashAtHand";
 export { DailyCash, type IDailyCash } from "./DailyCash";
-export { Order, type IOrder } from "./Order.ts";
+export { Order, type IOrder } from "./Order";
 export { GlassStock, type IGlassStock } from "./GlassStock";
-export { GlassIssue, type IGlassIssue } from "./GlassIssue";
+export { GlassIssuance, type IGlassIssuance } from "./GlassIssuance";
 export {
   DailyRecord,
   type IDailyRecord,
@@ -13,3 +13,8 @@ export {
   type IMonthlySummary,
 } from "./DailyRecord";
 export { DailyExpense, type IDailyExpense } from "./DailyExpense";
+export { APILog, type IAPILog } from "./APILog";
+export {
+  OphthalmologyRecord,
+  type IOphthalmologyRecord,
+} from "./ophthalmology/OphthalmologyRecord";

@@ -1,15 +1,15 @@
 // app/api/glass/optical-stock/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import {
-  getOpticalGlassStock,
-  addOpticalGlassStock,
-  updateOpticalGlassStock,
-  deleteOpticalGlassStock,
+  getGlassStock,
+  addGlassStockItem,
+  updateGlassStockItem,
+  deleteGlassStockItem,
 } from "@/lib/glass-data";
 
 export async function GET() {
   try {
-    const stock = await getOpticalGlassStock();
+    const stock = await getGlassStock();
     return NextResponse.json(stock);
   } catch (error) {
     console.error("Error fetching optical glass stock:", error);
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newStock = await addOpticalGlassStock(body);
+    const newStock = await addGlassStockItem(body);
     return NextResponse.json(newStock, { status: 201 });
   } catch (error) {
     console.error("Error creating optical glass stock:", error);

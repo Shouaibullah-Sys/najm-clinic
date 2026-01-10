@@ -93,4 +93,32 @@ userSchema.pre("save", function (next) {
 });
 
 // Use named export
+// Role permissions mapping
+export const RolePermissions = {
+  admin: [
+    "read:users",
+    "write:users",
+    "delete:users",
+    "read:glass",
+    "write:glass",
+    "delete:glass",
+    "read:orders",
+    "write:orders",
+    "delete:orders",
+    "read:dashboard",
+    "read:finance",
+    "write:finance",
+    "read:ophthalmology",
+    "write:ophthalmology",
+  ],
+  staff: [
+    "read:glass",
+    "write:glass",
+    "read:orders",
+    "write:orders",
+    "read:dashboard",
+    "read:ophthalmology",
+  ],
+} as const;
+
 export const User = models.User || model<IUser>("User", userSchema);

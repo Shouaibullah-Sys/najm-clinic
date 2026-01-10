@@ -1,8 +1,8 @@
 // store/glassStore.ts
 import { create } from "zustand";
 import { IGlassStock } from "@/lib/models/GlassStock";
-import { IOrder } from "@/lib/models/Order.ts";
-import { IGlassIssue } from "@/lib/models/GlassIssue";
+import { IOrder } from "@/lib/models/Order";
+import { IGlassIssuance } from "@/lib/models/GlassIssuance";
 
 interface GlassStore {
   // Glass Stock
@@ -16,7 +16,7 @@ interface GlassStore {
   pendingOrders: IOrder[];
 
   // Glass Issues
-  glassIssues: IGlassIssue[];
+  glassIssues: IGlassIssuance[];
 
   // Actions for Glass Stock
   setGlassStock: (stock: IGlassStock[]) => void;
@@ -34,8 +34,8 @@ interface GlassStore {
   setTotalOrders: (total: number) => void;
 
   // Actions for Glass Issues
-  setGlassIssues: (issues: IGlassIssue[]) => void;
-  addGlassIssue: (issue: IGlassIssue) => void;
+  setGlassIssues: (issues: IGlassIssuance[]) => void;
+  addGlassIssue: (issue: IGlassIssuance) => void;
 
   // Common
   loading: boolean;

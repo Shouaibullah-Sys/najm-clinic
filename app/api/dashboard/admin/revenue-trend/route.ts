@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth";
 import dbConnect from "@/lib/dbConnect";
 import { DailyRecord } from "@/lib/models/DailyRecord";
-import { Order } from "@/lib/models/Order.ts";
+import { Order } from "@/lib/models/Order";
+import { DailyExpense } from "@/lib/models/DailyExpense";
 
 export async function GET(req: NextRequest) {
   try {

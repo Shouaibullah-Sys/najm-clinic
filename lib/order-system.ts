@@ -1,5 +1,6 @@
 // lib/order-system.ts
 import dbConnect from "@/lib/dbConnect";
+import mongoose from "mongoose";
 import { GlassStock } from "@/lib/models/GlassStock";
 import { Order, IOrder, OrderItem as IOrderItem } from "@/lib/models/Order";
 import { GlassIssuance, IGlassIssuance } from "@/lib/models/GlassIssuance";
@@ -13,7 +14,9 @@ export interface IssuanceData extends GlassIssuanceType {
   // Already matches GlassIssuance interface
 }
 
-function toOrderData(order: IOrder & { items: any[] }): OrderData {
+function toOrderData(
+  order: IOrder & { items: Array<IOrderItem & { glassProduct: any }> }
+): OrderData {
   return {
     id: order._id.toString(),
     customerName: order.customerName,
@@ -87,7 +90,11 @@ export async function getAllOrders(): Promise<OrderData[]> {
   const orders = await Order.find()
     .populate("items.glassProduct", "productName batchNumber glassType")
     .sort({ createdAt: -1 });
-  return orders.map((order: any) => toOrderData(order));
+  return orders.map((order) =>
+    toOrderData(
+      order as IOrder & { items: Array<IOrderItem & { glassProduct: any }> }
+    )
+  );
 }
 
 export async function getOrder(id: string): Promise<OrderData | null> {
@@ -96,7 +103,11 @@ export async function getOrder(id: string): Promise<OrderData | null> {
     "items.glassProduct",
     "productName batchNumber glassType"
   );
-  return order ? toOrderData(order as any) : null;
+  return order
+    ? toOrderData(
+        order as IOrder & { items: Array<IOrderItem & { glassProduct: any }> }
+      )
+    : null;
 }
 
 export async function getOrdersByStatus(status: string): Promise<OrderData[]> {
@@ -104,7 +115,11 @@ export async function getOrdersByStatus(status: string): Promise<OrderData[]> {
   const orders = await Order.find({ status })
     .populate("items.glassProduct", "productName batchNumber glassType")
     .sort({ createdAt: -1 });
-  return orders.map((order: any) => toOrderData(order));
+  return orders.map((order) =>
+    toOrderData(
+      order as IOrder & { items: Array<IOrderItem & { glassProduct: any }> }
+    )
+  );
 }
 
 export async function getOrdersByCustomer(phone: string): Promise<OrderData[]> {
@@ -112,7 +127,11 @@ export async function getOrdersByCustomer(phone: string): Promise<OrderData[]> {
   const orders = await Order.find({ customerPhone: phone })
     .populate("items.glassProduct", "productName batchNumber glassType")
     .sort({ createdAt: -1 });
-  return orders.map((order: any) => toOrderData(order));
+  return orders.map((order) =>
+    toOrderData(
+      order as IOrder & { items: Array<IOrderItem & { glassProduct: any }> }
+    )
+  );
 }
 
 // In lib/order-system.ts, update the createOrder function:
@@ -130,7 +149,7 @@ export async function createOrder(orderData: any): Promise<OrderData> {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
 
-  const OrderModel = mongoose.model<IOrder>("Order");
+  const OrderModel = mongoose.models.Order || mongoose.model<IOrder>("Order");
   const latestOrder = await OrderModel.findOne({
     invoiceNumber: { $regex: `^INV-${year}${month}${day}` },
   }).sort({ invoiceNumber: -1 });
@@ -209,7 +228,11 @@ export async function createOrder(orderData: any): Promise<OrderData> {
     "productName batchNumber glassType"
   );
 
-  return toOrderData(populatedOrder as any);
+  return toOrderData(
+    populatedOrder as IOrder & {
+      items: Array<IOrderItem & { glassProduct: any }>;
+    }
+  );
 }
 
 export async function updateOrder(
@@ -229,7 +252,11 @@ export async function updateOrder(
     { new: true, runValidators: true }
   ).populate("items.glassProduct", "productName batchNumber glassType");
 
-  return order ? toOrderData(order as any) : null;
+  return order
+    ? toOrderData(
+        order as IOrder & { items: Array<IOrderItem & { glassProduct: any }> }
+      )
+    : null;
 }
 
 export async function deleteOrder(id: string): Promise<boolean> {
@@ -336,7 +363,9 @@ export async function getAllIssuances(): Promise<IssuanceData[]> {
   const issuances = await GlassIssuance.find()
     .populate("stockItemId", "productName batchNumber glassType")
     .sort({ issuedAt: -1 });
-  return issuances.map((issuance: any) => toIssuanceData(issuance));
+  return issuances.map((issuance) =>
+    toIssuanceData(issuance as IGlassIssuance & { stockItemId?: any })
+  );
 }
 
 export async function getOrderIssuances(
@@ -346,7 +375,9 @@ export async function getOrderIssuances(
   const issuances = await GlassIssuance.find({ orderId })
     .populate("stockItemId", "productName batchNumber glassType")
     .sort({ issuedAt: -1 });
-  return issuances.map((issuance: any) => toIssuanceData(issuance));
+  return issuances.map((issuance) =>
+    toIssuanceData(issuance as IGlassIssuance & { stockItemId?: any })
+  );
 }
 
 export async function getStockItemIssuances(
@@ -356,7 +387,9 @@ export async function getStockItemIssuances(
   const issuances = await GlassIssuance.find({ stockItemId })
     .populate("stockItemId", "productName batchNumber glassType")
     .sort({ issuedAt: -1 });
-  return issuances.map((issuance: any) => toIssuanceData(issuance));
+  return issuances.map((issuance) =>
+    toIssuanceData(issuance as IGlassIssuance & { stockItemId?: any })
+  );
 }
 
 export async function returnStock(
@@ -404,7 +437,9 @@ export async function returnStock(
 
     return {
       success: true,
-      issuance: toIssuanceData(issuance),
+      issuance: toIssuanceData(
+        issuance as IGlassIssuance & { stockItemId?: any }
+      ),
     };
   } catch (error) {
     await session.abortTransaction();
@@ -440,7 +475,9 @@ export async function markIssuanceDamaged(
 
   return {
     success: true,
-    issuance: toIssuanceData(issuance),
+    issuance: toIssuanceData(
+      issuance as IGlassIssuance & { stockItemId?: any }
+    ),
   };
 }
 
