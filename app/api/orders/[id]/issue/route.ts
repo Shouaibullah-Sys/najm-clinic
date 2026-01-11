@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { issueStockToOrder, returnStock } from "@/lib/order-system";
 
 interface Params {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export async function POST(request: NextRequest, { params }: Params) {
   try {
+    const { id } = await params;
     const data = await request.json();
 
     const requiredFields = ["stockItemId", "quantity", "issuedBy"];
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
 
     const result = await issueStockToOrder(
-      params.id,
+      id,
       data.stockItemId,
       data.quantity,
       data.issuedBy,

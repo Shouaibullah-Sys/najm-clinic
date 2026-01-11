@@ -9,7 +9,7 @@ import mongoose from "mongoose";
 // PATCH: Update expense status
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await dbConnect();
@@ -23,7 +23,7 @@ export async function PATCH(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
     const { status } = await request.json();
 
     // Validate status

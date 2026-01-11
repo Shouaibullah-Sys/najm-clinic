@@ -6,14 +6,15 @@ import {
 } from "@/lib/stock-management";
 
 interface Params {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export async function GET(request: NextRequest, { params }: Params) {
   try {
-    const item = await getStockItem(params.id);
+    const { id } = await params;
+    const item = await getStockItem(id);
     if (!item) {
       return NextResponse.json(
         { error: "Stock item not found" },
@@ -32,8 +33,9 @@ export async function GET(request: NextRequest, { params }: Params) {
 
 export async function PUT(request: NextRequest, { params }: Params) {
   try {
+    const { id } = await params;
     const data = await request.json();
-    const updatedItem = await updateStockItem(params.id, data);
+    const updatedItem = await updateStockItem(id, data);
 
     if (!updatedItem) {
       return NextResponse.json(
@@ -54,7 +56,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
 export async function DELETE(request: NextRequest, { params }: Params) {
   try {
-    const success = await deleteStockItem(params.id);
+    const { id } = await params;
+    const success = await deleteStockItem(id);
 
     if (!success) {
       return NextResponse.json(
