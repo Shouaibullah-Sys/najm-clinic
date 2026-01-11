@@ -1,13 +1,14 @@
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/useAuthStore";
+import { UserRole } from "@/lib/schemas/userSchema";
 
 export default function ProtectedRoute({
   children,
   allowedRoles,
 }: {
   children: React.ReactNode;
-  allowedRoles: ('admin' | 'ceo' | 'laboratory' | 'pharmacy')[];
+  allowedRoles: UserRole[];
 }) {
   const { isAuthenticated, isLoading, user } = useAuthStore();
   const router = useRouter();
@@ -15,9 +16,9 @@ export default function ProtectedRoute({
   useEffect(() => {
     if (!isLoading) {
       if (!isAuthenticated) {
-        router.push('/login');
+        router.push("/login");
       } else if (user && !allowedRoles.includes(user.role)) {
-        router.push('/unauthorized');
+        router.push("/unauthorized");
       }
     }
   }, [isAuthenticated, isLoading, user, allowedRoles, router]);
