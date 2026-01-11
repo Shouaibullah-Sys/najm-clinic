@@ -4,7 +4,7 @@ import dbConnect from "@/lib/dbConnect";
 import { GlassStock as GlassStockModel } from "@/lib/models/GlassStock";
 import { Order } from "@/lib/models/Order";
 import { IGlassStock, IOrder } from "@/lib/models";
-import { GlassOrder, GlassStock } from "@/types/glass";
+import { GlassOrder, GlassStock, GlassDashboardStats } from "@/types/glass";
 
 // Helper function to convert database model to API type
 function toGlassStockItem(stock: IGlassStock): GlassStock {

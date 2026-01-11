@@ -27,7 +27,7 @@ export default function CustomSessionProvider({
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isLoading = useAuthStore((state) => state.isLoading);
 
-  const status = isLoading
+  const status: "authenticated" | "unauthenticated" | "loading" = isLoading
     ? "loading"
     : isAuthenticated
     ? "authenticated"

@@ -64,8 +64,8 @@ export function GlassDashboard() {
 
   const statCards = [
     {
-      title: "Total Stock",
-      value: stats.totalStock,
+      title: "Total Stock Items",
+      value: stats.totalStockItems,
       icon: Package,
       color: "text-blue-600",
       bgColor: "bg-blue-100",
@@ -86,14 +86,14 @@ export function GlassDashboard() {
     },
     {
       title: "Total Customers",
-      value: stats.customerCount,
+      value: stats.totalCustomers,
       icon: Users,
       color: "text-purple-600",
       bgColor: "bg-purple-100",
     },
     {
-      title: "Suppliers",
-      value: stats.supplierCount,
+      title: "Total Suppliers",
+      value: stats.totalSuppliers,
       icon: Truck,
       color: "text-indigo-600",
       bgColor: "bg-indigo-100",
@@ -106,20 +106,18 @@ export function GlassDashboard() {
       bgColor: "bg-green-100",
     },
     {
-      title: "Monthly Expenses",
-      value: `AFN ${stats.monthlyExpenses.toLocaleString()}`,
-      icon: TrendingDown,
-      color: "text-red-600",
-      bgColor: "bg-red-100",
-    },
-    {
-      title: "Net Profit",
-      value: `AFN ${(
-        stats.monthlyRevenue - stats.monthlyExpenses
-      ).toLocaleString()}`,
+      title: "Total Stock Value",
+      value: `AFN ${stats.totalStockValue.toLocaleString()}`,
       icon: TrendingUp,
       color: "text-emerald-600",
       bgColor: "bg-emerald-100",
+    },
+    {
+      title: "Issued This Month",
+      value: stats.issuedThisMonth,
+      icon: Truck,
+      color: "text-cyan-600",
+      bgColor: "bg-cyan-100",
     },
   ];
 
