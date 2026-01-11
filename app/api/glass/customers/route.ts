@@ -6,7 +6,6 @@ import {
   updateGlassCustomer,
   deleteGlassCustomer,
 } from "@/lib/glass-data";
-import { GlassCustomer } from "@/types/glass";
 
 export async function GET() {
   try {

@@ -22,23 +22,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { UserRoleEnum } from "@/lib/schemas/userSchema";
+import {
+  UserRoleEnum,
+  CreateUserSchema,
+  UpdateUserSchema,
+} from "@/lib/schemas/userSchema";
 import { z } from "zod";
 
-// Define a unified form schema that works for both create and update
-const UserFormSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Invalid email address"),
-  phone: z
-    .string()
-    .min(10, "Phone number must be at least 10 digits")
-    .regex(/^[0-9+]+$/, "Invalid phone number format"),
-  role: z.enum(UserRoleEnum),
-  approved: z.boolean(),
-  password: z.string().optional(),
-});
-
-type UserFormValues = z.infer<typeof UserFormSchema>;
+// Use UpdateUserSchema for both modes, handle create validation in onSubmit
+type UserFormValues = z.infer<typeof UpdateUserSchema>;
 
 interface UserFormProps {
   user?: (Partial<UserFormValues> & { _id?: string }) | null;
@@ -49,50 +41,31 @@ export default function UserForm({ user, onSuccess }: UserFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditMode = !!user?._id;
 
+  // Use UpdateUserSchema for both create and edit
+  const FormSchema = UpdateUserSchema;
+
+  // Create default values
+  const getDefaultValues = (): UserFormValues => ({
+    name: user?.name || "",
+    email: user?.email || "",
+    phone: user?.phone || "",
+    password: "", // Always start with empty
+    role: user?.role || "staff",
+    approved: user?.approved ?? false,
+    active: user?.active ?? true,
+  });
+
   const form = useForm<UserFormValues>({
-    resolver: zodResolver(UserFormSchema),
-    defaultValues: {
-      name: user?.name || "",
-      email: user?.email || "",
-      phone: user?.phone || "",
-      password: "",
-      role: user?.role || "laboratory",
-      approved: user?.approved || false,
-    },
+    resolver: zodResolver(FormSchema) as any, // Cast to bypass type issues
+    defaultValues: getDefaultValues(),
   });
 
   const onSubmit = async (data: UserFormValues) => {
     setIsSubmitting(true);
     try {
-      // Validate password for new users
-      if (!isEditMode && !data.password) {
-        toast.error("Password is required for new users");
-        setIsSubmitting(false);
-        return;
-      }
-
-      // Validate password strength for new users or when password is provided
-      if (data.password && (!isEditMode || data.password.length > 0)) {
-        if (data.password.length < 8) {
-          toast.error("Password must be at least 8 characters");
-          setIsSubmitting(false);
-          return;
-        }
-        if (!/[A-Z]/.test(data.password)) {
-          toast.error("Password must contain at least one uppercase letter");
-          setIsSubmitting(false);
-          return;
-        }
-        if (!/[0-9]/.test(data.password)) {
-          toast.error("Password must contain at least one number");
-          setIsSubmitting(false);
-          return;
-        }
-        if (!/[!@#$%^&*]/.test(data.password)) {
-          toast.error("Password must contain at least one special character");
-          setIsSubmitting(false);
-          return;
-        }
+      // For create mode, ensure password is provided
+      if (!isEditMode && (!data.password || data.password.trim() === "")) {
+        throw new Error("Password is required for new users");
       }
 
       const url = user?._id
@@ -101,10 +74,14 @@ export default function UserForm({ user, onSuccess }: UserFormProps) {
 
       const method = user?._id ? "PUT" : "POST";
 
-      // Prepare payload - remove password field entirely if empty for updates
+      // Prepare payload - handle password for updates
       const payload: any = { ...data };
-      if (user?._id && !data.password) {
-        delete payload.password;
+
+      // For updates: remove password if empty, undefined, or just whitespace
+      if (isEditMode) {
+        if (!payload.password || payload.password.trim() === "") {
+          delete payload.password;
+        }
       }
 
       const response = await fetch(url, {
@@ -119,7 +96,8 @@ export default function UserForm({ user, onSuccess }: UserFormProps) {
           message?: string;
           details?: any;
         };
-        // Handle validation errors with details
+
+        // Handle validation errors from server
         if (errorData.details) {
           const validationErrors = Object.values(
             errorData.details.fieldErrors || {}
@@ -131,7 +109,9 @@ export default function UserForm({ user, onSuccess }: UserFormProps) {
         );
       }
 
-      toast.success(user?._id ? "User updated" : "User created");
+      toast.success(
+        isEditMode ? "User updated successfully" : "User created successfully"
+      );
       onSuccess();
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "An error occurred");
@@ -171,6 +151,7 @@ export default function UserForm({ user, onSuccess }: UserFormProps) {
                   type="email"
                   {...field}
                   className="text-sm sm:text-base"
+                  disabled={isEditMode}
                 />
               </FormControl>
               <FormMessage className="text-xs" />
@@ -201,7 +182,7 @@ export default function UserForm({ user, onSuccess }: UserFormProps) {
                 Password{" "}
                 {!isEditMode && <span className="text-red-500">*</span>}
                 {isEditMode && (
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-gray-500 ml-2">
                     (leave empty to keep current)
                   </span>
                 )}
@@ -210,9 +191,17 @@ export default function UserForm({ user, onSuccess }: UserFormProps) {
                 <Input
                   type="password"
                   {...field}
+                  value={field.value || ""}
                   className="text-sm sm:text-base"
+                  placeholder={isEditMode ? "••••••••" : "Enter password"}
                 />
               </FormControl>
+              <div className="text-xs text-gray-500 space-y-1 mt-1">
+                <p>Must be at least 8 characters</p>
+                <p>
+                  Must contain uppercase letter, number, and special character
+                </p>
+              </div>
               <FormMessage className="text-xs" />
             </FormItem>
           )}
@@ -247,30 +236,64 @@ export default function UserForm({ user, onSuccess }: UserFormProps) {
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="approved"
-          render={({ field }) => (
-            <FormItem className="flex items-center space-x-2">
-              <FormControl>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
-              </FormControl>
-              <FormLabel className="text-sm sm:text-base !mt-0">
-                Approve User
-              </FormLabel>
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="approved"
+            render={({ field }) => (
+              <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                <div className="space-y-0.5">
+                  <FormLabel className="text-sm sm:text-base">
+                    Approved
+                  </FormLabel>
+                  <div className="text-xs text-gray-500">
+                    User can access the system
+                  </div>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="active"
+            render={({ field }) => (
+              <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                <div className="space-y-0.5">
+                  <FormLabel className="text-sm sm:text-base">Active</FormLabel>
+                  <div className="text-xs text-gray-500">
+                    User account is active
+                  </div>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
 
         <Button
           type="submit"
           disabled={isSubmitting}
           className="w-full sm:w-auto text-sm sm:text-base"
         >
-          {isSubmitting ? "Saving..." : "Save User"}
+          {isSubmitting
+            ? isEditMode
+              ? "Updating..."
+              : "Creating..."
+            : isEditMode
+            ? "Update User"
+            : "Create User"}
         </Button>
       </form>
     </Form>

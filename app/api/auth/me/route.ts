@@ -29,9 +29,9 @@ export async function GET(req: NextRequest) {
 
     await dbConnect();
 
-    const user = await User.findById(decoded.id)
+    const user = (await User.findById(decoded.id)
       .select("-password -refreshTokens")
-      .lean();
+      .lean()) as any;
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -53,8 +53,6 @@ export async function GET(req: NextRequest) {
       avatar: user.avatar,
       approved: user.approved,
       active: user.active,
-      department: user.department,
-      joiningDate: user.joiningDate,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     });
