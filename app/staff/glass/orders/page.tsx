@@ -222,7 +222,7 @@ export default function NewOrderPage() {
       });
 
       // Redirect to orders page
-      router.push("/glass/orders");
+      router.push("/staff/dashboard");
     } catch (error: any) {
       console.error("Error creating order:", error);
       toast("Error", {
